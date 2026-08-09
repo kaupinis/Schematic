@@ -1,1 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>eightolives Schematic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="keywords" content="schematic app, electrical schematic, design entry, web app">
+<meta name="description" content="Create electrical schematics, netlists and sim models with eightolives' Schematic, a free, web-based, schematic entry tool.">
+<meta property="og:url" content="https://www.eightolives.com/docs/Schematic/SchematicM.htm" >
+<meta property="og:type" content="website" >
+<meta property="og:title" content="eightolives Schematic" >
+<meta property="og:description" content="An electrical design entry tool." >
+<meta property="og:image" content="https://www.eightolives.com/docs/Schematic/images/SM3.png" > 
+<meta name="twitter:title" content="eightolives Schematic">
+<meta name="twitter:description" content="An electrical design schematic entry tool.">
+<meta name="twitter:image" content="https://www.eightolives.com/docs/Schenatic/images/SM3.png">
+<meta name="theme-color" content="#fbfae8">
+<link rel="icon" type="image/png" href="images/eofav.png">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="apple-touch-icon" href="images/eo_schem180w.png">
+<!--<link rel="apple-touch-startup-image" href="images/schematic_splash.png"> -->
+<link rel="stylesheet" href="css/ts.css">
+<link rel="manifest" href="SchematicWebmanifest.json"> 
+<link rel="canonical" href="https://www.eightolives.com/docs/Schematic/SchematicM.htm">
+
+</head>
+
+<body>
+<header>
+<div id="eos" class="eos">&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:menu('Help')" >
+eightolives Schematic</a> </div>
+<!--
+<div><a href="javascript:menu('Nav')"><img src="images/ms.png" alt="Nav" class="logo" style="float:left;margin-top:5px; margin-left:5px; margin-bottom:5px;"></a>
+<a href="javascript:menu('Design')" class="navbarli2">&nbsp;&nbsp;&nbsp;&nbsp;Design</a>
+<a href="javascript:menu('Edit')" class="navbarli2"> &nbsp;&nbsp;Edit</a>
+<a href="javascript:menu('Components')" class="navbarli2"> &nbsp;&nbsp;Comp</a>
+<a href="javascript:menu('Preferences')" class="navbarli2"> &nbsp;&nbsp;Pref</a> 
+<div id="eos" class="eos">&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:menu('Help')">
+eightolives Schematic</a> </div> 
+</div><div id="oll" style="float:left;font-size:12px"></div>
+<br>
+<br>
+-->
+<!--
+<div id="Welcome" style="visibility : hidden; color:black;position : absolute; top : 200px; left : 50%; width:250px; height:250px; margin-top: -50px; margin-left: -125px; background-color:#ffff00;border-radius:30px; text-align: center;animation-name: example; animation-duration: 10s;" > <br><i>Welcome to</i><br><span style="font-weight: bold">eightolives Schematic</span> <br><br><span style="font-size:10pt;">Cookies help deliver our services. By using eightolives Schematic, you agree to our use of cookies. Learn more <a href="Schematic_cookies.htm" target="g" style="color:blue">about cookies.</a></span><br><br><br><button onClick="closeWelcome()">Got It</button>
+</div> -->
+<div id="oll" style="float:left;font-size:12px">
+</div>
+</header>
+<main>
+<br class="clear">
+
+<div id="Design" style="visibility : hidden; position : absolute; top : 150px; left : 30pt" >
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:openFile()">Open File (FS)</a>
+<br><a href="javascript:makeOneFile(true)">Save as OneFile</a>
+<hr><a href="javascript:openProject()">Open Project</a>
+<br><a href="javascript:openProjectFilesList()">Open Project File</a>
+<br><a href="javascript:saveProject()">Save Project</a>
+<br><a href="javascript:upload()">Upload File</a>
+<br><a href="javascript:menu('ProjEdit')">Edit Project</a>
+<hr><a href="javascript:designMenu(2)">New Sheet</a>
+<hr><a href="javascript:designMenu(4)">Fix Refdes</a>
+<br><a href="javascript:designMenu(5)">Update Nets</a>
+<br><a href="javascript:checkDesign()">Check Design</a>
+<hr><a href="javascript:generateBOM()">Generate BOM</a>
+<br><a href="javascript:generateNetlist()">Generate Netlist</a>
+<hr><a href="javascript:saveSheet()">Save Sheet (FS)</a>
+<br><a href="javascript:saveSheetLocal()">Save Sheet Local</a>
+<br><a href="javascript:saveSheetPreview()">Save Sheet Preview</a>
+<br><a href="javascript:emailSheet()">Email Sheet</a>
+<br><a href="javascript:exportSchematic()">Export</a>
+<hr><a href="javascript:viewWave()">View Waveforms</a>
+<br><a href="javascript:viewLayout()">View Layout</a>
+<br><a href="javascript:menu('AnalysisWiz')">Analyze</a>
+<hr><a href="javascript:printPreview()">Print Preview</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="Preferences" style="visibility : hidden; position : absolute; top : 150px; left : 80px" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<input type="checkbox" id="grid" onClick="checkGrid()" checked> Show Grid
+<br><input type="checkbox" id="spins" onClick="checkPins()" checked> Show Pins
+<br><input type="checkbox" id="pal" onClick="checkPalette()" checked> Black Palette
+<br><input type="checkbox" id="ut" checked> Use Template
+<br><input type="checkbox" id="xb" onClick="checkAreas()"> Show Select Areas
+<br><input type="checkbox" id="grids" onChange="updateGrid()"> Grid 0.050
+<br><input type="checkbox" id="savecat" onChange="CloseMenu()"> Concatenate sheets
+<hr><input type="radio" name="selcon" id="conall" checked> Select All
+<br><input type="radio" name="selcon" id="concomp" > Only Components
+<br><input type="radio" name="selcon" id="conpins" > Only Pins
+<br><input type="radio" name="selcon" id="connets" > Only Nets
+<hr><input type="checkbox" id="uav" > Uppercase Attribute Values
+<br><input type="checkbox" id="symbolpath" onChange="updatepath()" checked> Full symbol path
+<br><input type="checkbox" id="vhdlcomps" onChange="CloseMenu()" checked> VHDL Components
+<br><input type="checkbox" id="ipodrules" onChange="updateipod()" checked> Use iPod rules
+<br><input type="checkbox" id="autofix" checked> Auto Fix on Load
+<hr><input type="checkbox" id="autooffset" checked> Auto Offset
+<br>X Offset<input type="text" id="xoffset" size="4" value = "0">
+<br>Y Offset<input type="text" id="yoffset" size="4" value = "0">
+<hr><input type="checkbox" id="epm"> Enable Parts Manager
+<br><input type="checkbox" id="bomfp" checked> BOM Footprints
+<br><input type="checkbox" id="makelocalhwm" checked> Make All HW models
+<br><input type="checkbox" id="fol" onChange="checkConnection()"> Force Offline
+<br><a href="javascript:menu('Log')">Login</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="CompPopup" style="visibility : hidden; position : absolute; top : 150px; left : 80px" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:editAttributes()">Edit Attributes</a>
+<br><a href="javascript:editComponent()">Edit Component</a>
+<br><a href="javascript:editPins()">Edit Pins</a>
+<br><a href="javascript:togglePinNumbers()">Toggle Pin Numbers</a>
+<hr><a href="javascript:addNetToPin()">Add Net to Pin...</a>
+<br><a href="javascript:addStubToPin()">Add Net Stub to Pin...</a>
+<br><a href="javascript:addStubsAll()">Add Net Stubs All</a>
+<br><a href="javascript:selectPin()">Select Pin...</a>
+<hr><a href="javascript:checkFixDupeNames()">Check / Fix Dupe Names</a>
+<br><a href="javascript:saveSymbol()">Save Symbol (FS)</a>
+<br><a href="javascript:saveSelectedSymbolLocal()">Save Symbol Local</a>
+<br><a href="javascript:saveSelectedSymbol()">Save Symbol Preview</a>
+<br><a href="javascript:emailSymbol()">Email Symbol</a>
+<br><a href="javascript:exportSymbol()">Export Symbol</a>
+<br><a href="javascript:saveSelectedSymbolProject()">Save Symbol Project</a>
+<br><a href="javascript:makeSimModelTemplate()">Report Comp HW Model</a>
+<br><a href="javascript:makeComponentSchematic()">Make Comp Schematic</a>
+<hr><a href="javascript:copy()">Copy</a>
+<br><a href="javascript:move()">Move</a>
+<br><a href="javascript:moveRefdes()">Move Ref</a>
+<br><a href="javascript:moveValue()">Move Value</a>
+<br><a href="javascript:moveDevice()">Move Device</a>
+<br><a href="javascript:rotate()">Rotate</a>
+<br><a href="javascript:flip()">Flip</a>
+<hr><a href="javascript:openDocumentation()">View Documentation</a>
+<hr><a href="javascript:setFootprint()">Set Footprint</a>
+<br><a href="javascript:setPlacenear()">Set Placenear</a>
+<hr><a href="javascript:deleteItem()">Delete</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div style="position: sticky; top: 0; background-color: #fbfae8; ">
+<div><a href="javascript:menu('Nav')"><img src="images/ms.png" alt="Nav" class="logo" style="float:left;margin-top:5px; margin-left:5px; margin-bottom:5px;"></a>
+<!--<a href="#rpt"><img src="images/ms.png" alt="Rpt" class="logo"></a> -->
+<a href="javascript:menu('Design')" class="navbarli2">&nbsp;&nbsp;&nbsp;&nbsp; Design</a>
+<a href="javascript:menu('Edit')" class="navbarli2" > &nbsp;&nbsp;Edit</a>
+<a href="javascript:menu('Components')" class="navbarli2""> &nbsp;&nbsp;Comp</a>
+<a href="javascript:menu('Preferences')" class="navbarli2""> &nbsp;&nbsp;Pref</a>
+<!--<a href="javascript:menu('Help')" class="navbarli">Help</a> -->
+<!--
+<div id="eos" class="eos">&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:menu('Help')" style="color:'lightblue'">
+eightolives Schematic</a> </div>-->
+<!--
+</div>
+<br>
+<div style="margin-left:auto; margin-right:auto;"> -->
+<br><br>
+<div style="float:left">
+<button class="buttonT" style="font-size:7pt; background-color:#ffcccc;" onClick="editComponent()" title="Component Edit">CE</button>
+<button class="buttonT" style="font-size:7pt;" onClick="editAttributes()" title="Attribute Edit">AT</button>
+<button class="buttonT" style="font-size:7pt;" onClick="move()" title="Move">MV</button>&nbsp;&nbsp;
+<button class="buttonT" style="font-size:8pt;" onClick="moveLeft()" title="Move Left" ><img width="15" height="10" src="images/tleft.png" alt="Move Left"></button>
+<button class="buttonT" style="font-size:8pt;" onClick="moveUp()" title="Move Up"><img width="15" height="10" src="images/tup.png" alt="Move Up"></button>
+<button class="buttonT" style="font-size:8pt;" onClick="moveDown()" title="Move Down"><img width="15" height="10" src="images/tdown.png" alt="Move Down"></button>
+<button class="buttonT" style="font-size:8pt;" onClick="moveRight()" title="Move Right"><img width="15" height="10" src="images/tright.png" alt="Move Right"></button>
+<!--<button class="buttonT" style="font-size:8pt;" onClick="menu('CompPix')" title="Symbols">SB</button>-->
+</div>
+<br><br>
+<!--<div id="oll"></div> -->
+</div>
+<div id="Welcome" style="visibility : hidden; color:black;position : absolute; top : 200px; left : 50%; width:250px; height:250px; margin-top: -50px; margin-left: -125px; background-color:#ffff00;border-radius:30px; text-align: center;animation-name: example; animation-duration: 10s;" > <br><i>Welcome to</i><br><span style="font-weight: bold">eightolives Schematic</span> <br><br><span style="font-size:10pt;">Cookies help deliver our services. By using eightolives Schematic, you agree to our use of cookies. Learn more <a href="Schematic_cookies.htm" target="g" style="color:blue">about cookies.</a></span><br><br><br><button onClick="closeWelcome()">Got It</button>
+</div>
+
+<div id="Nav" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<br><a href="javascript:showReport()">View Report</a>
+<br><a href="javascript:menu('Design')">Design</a>
+<br><a href="javascript:menu('Edit')">Edit</a>
+<br><a href="javascript:menu('Components')">Components</a>
+<br><a href="javascript:menu('Draw')">Draw</a>
+<br><a href="javascript:menu('Preferences')">Preferences</a>
+<br><a href="javascript:menu('AnalysisWiz')">Analyze</a>
+<br><a href="javascript:menu('Aboutx')">About</a>
+<br><a href="javascript:menu('Help')">Help</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="Draw" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:addDraw(0)">Add Text</a>
+<br><a href="javascript:addDraw(1)">Add Line</a>
+<br><a href="javascript:addDraw(2)">Add Box</a>
+<br><a href="javascript:addDraw(3)">Add Circle</a>
+<br><a href="javascript:addDraw(4)">Add Arc</a>
+<br><a href="javascript:addDraw(5)">Add Shape</a>
+<br><a href="javascript:addDraw(6)">Add Picture</a>
+<br><a href="javascript:addDraw(7)">Add Pin</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="Edit" style="visibility : hidden; position : absolute; top : 50pt; left : 90pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:undo()">Undo</a>
+<br><a href="javascript:redo()">Redo</a>
+<hr><a href="javascript:editAttributes()">Edit Attributes</a>
+<br><a href="javascript:editPins()">Edit Pins</a>
+<hr><a href="javascript:deleteItem()">Delete</a>
+<hr><a href="javascript:designMenu(2)">New Sheet</a>
+<br><a href="javascript:deleteSheet()">Delete Sheet</a>
+<!--<hr><a href="javascript:deleteSheet1()">Delete Sheet 1</a> -->
+<hr><a href="javascript:copy()">Copy</a>
+<br><a href="javascript:rotate()">Rotate</a>
+<br><a href="javascript:flip()">Flip</a>
+<br><a href="javascript:editMenu(5)">Move</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="Components" style="visibility : hidden; position : absolute; top : 50pt; left : 70pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:componentSelector()">Component Selector</a>
+<hr><a href="javascript:menu('ConWiz')">Connector Wizard</a>
+<br><a href="javascript:menu('BlockWiz')">Block Symbol Wizard</a>
+<hr><a href="javascript:group()">Group</a>
+<br><a href="javascript:makeSymbolGroup()">Make Symbol From Group</a>
+<br><a href="javascript:ungroupSelected()">Ungroup</a>
+<hr><a href="javascript:compMenu(4)">Select Object...</a>
+<br><a href="javascript:compMenu(5)">Select Net Segment...</a>
+<hr><a href="javascript:openDocumentation()">View Documentation</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="Help" style="visibility : hidden; position : absolute; top : 50pt; left : 100pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:menu('Aboutx')">About</a>
+<!--<br><a href="CheckUpdates.htm" target="x" onClick="CloseMenu()">Check for Updates</a> -->
+<br><a href="js/gpl-3.0.txt" target="x" onClick="CloseMenu()">License</a>
+<br><a href="SchematicMobileIssues.htm" target="x" onClick="CloseMenu()">Known Issues</a>
+<br><a href="quikhints.htm" target="x" onClick="CloseMenu()">Quick Hints</a>
+<br><a href="index.htm" target="x" onClick="CloseMenu()">More Help</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="Aboutx" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt; color : black;" >
+<table class="popupmenu"  ><tr><td class="bookmark">
+<p>eightolives Schematic</p> 
+<span style= "font-size : 8pt">Development Version 
+<br>copyright &copy; 2026 William Kaupinis, All rights reserved.
+<br>eightolives.com</span>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="DPopup" style="visibility : hidden; position : absolute; top : 50pt; left : 80pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:editAttributes()">Edit Attributes</a>
+<br><a href="javascript:editComponent()">Edit Component</a>
+<hr><a href="javascript:move()">Move</a>
+<br><a href="javascript:rotate()">Rotate</a>
+<br><a href="javascript:flip()">Flip</a>
+<hr><a href="javascript:deleteItem()">Delete</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="BusPopup" style="visibility : hidden; position : absolute; top : 50pt; left : 80pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:editAttributes()">Edit Attributes</a>
+<br><a href="javascript:editComponent()">Edit Component</a>
+<br><a href="javascript:editBusSize()">Edit Bus Size</a>
+<hr><a href="javascript:move()">Move</a>
+<hr><a href="javascript:deleteItem()">Delete</a>
+<hr><a href="javascript:editMembers()">Edit Record Members</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="BusSize" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Edit Bus Size</span><br>
+<br>Limit 1:<input type="text" id="BL1" size ="15" value = "0">
+<br>downto
+<br>Limit 2:<input type="text" id="BL2" size ="15" value= "0">
+<br><button onClick="editBusSizeOK()">OK</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="PathPopup" style="visibility : hidden; position : absolute; top : 50pt; left : 80pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:editAttributes()">Edit Attributes</a>
+<br><a href="javascript:editComponent()">Edit Component</a>
+<br><a href="javascript:editPath()">Edit Path</a>
+<hr><a href="javascript:move()">Move</a>
+<br><a href="javascript:rotate()">Rotate</a>
+<br><a href="javascript:flip()">Flip</a>
+<hr><a href="javascript:deleteItem()">Delete</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="NPopup" style="visibility : hidden; position : absolute; top : 50pt; left : 80pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:editAttributes()">Edit Attributes</a>
+<br><a href="javascript:editNetName()">Edit Net Segment Name</a>
+<br><a href="javascript:editNetComment()">Net Comment</a>
+<br><a href="javascript:setNetPriority()">Set Net Priority Route</a>
+<br><a href="javascript:adjustNet()">Adjust Net</a>
+<br><a href="javascript:selectEnd()">Select End</a>
+<br><a href="javascript:addNetVertex()">Add Vertex</a>
+<br><a href="javascript:highligtSelectedNet()">Highlight Net</a>
+<br><a href="javascript:addWaveform()">Add to Waveforms</a>
+<hr><a href="javascript:move()">Move</a>
+<hr><a href="javascript:deleteItem()">Delete</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="NetEnd" style="visibility : hidden; position : absolute; top : 50pt; left : 80pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:addNet()">Add Net</a>
+<br><a href="javascript:movePoint()">Move Point</a>
+<br><a href="javascript:moveBanding()">Banding Move</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="Dummy" style="visibility : hidden; position : absolute; top : 50pt; left : 80pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+
+<div id="PPopup" style="visibility : hidden; position : absolute; top : 50pt; left : 0pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:editAttributes()">Edit Attributes</a>
+<hr><a href="javascript:movePinNumber()">Move Pin Number</a>
+<br><a href="javascript:movePinLabel()">Move Pin Label</a>
+<br><a href="javascript:movePin()">Move Pin</a>
+<hr><a href="javascript:addNetStub()">Add Net Stub</a>
+<hr><a href="javascript:addNet()">Add Net</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+<div id="BPopup" style="visibility : hidden; position : absolute; top : 50pt; left : 0pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:editAttributes()">Edit Attributes</a>
+<hr><a href="javascript:movePinNumber()">Move Pin Number</a>
+<br><a href="javascript:movePinLabel()">Move Pin Label</a>
+<br><a href="javascript:movePin()">Move Pin</a>
+<hr><a href="javascript:connectBus()">Connect to Bus</a>
+<br><a href="javascript:editBusConnections()">Edit Bus Connections</a>
+<br><a href="javascript:editComponentRecordDefinition()">Edit Record Definition</a>
+<!--<br><a href="javascript:removeBus()">Remove Bus</a>-->
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="PPPopup" style="visibility : hidden; position : absolute; top : 50pt; left : 0pt" >
+<table class="popupmenu"><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<a href="javascript:rotate()">Rotate</a>
+<br><a href="javascript:flip()">Flip</a>
+<br><a href="javascript:move()">Move</a>
+<hr><a href="javascript:busToggle()">Bus Toggle</a>
+<hr><a href="javascript:CloseMenu()">Close</a>
+</td></tr></table>
+</div>
+
+<div id="Comps" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Component Selector</span><br>
+<hr>Select a Library:
+<br><select id="lib" size = 1 style="width: 200px;" onChange="complibChange()">
+</select>
+<hr>Search:
+<input type="text" size="15" id="symbsearch" value=""><button onclick="symbSearch()">Search</button>
+<hr>Select a Symbol:
+<br><select id="symb" size = 5 style="width: 200px;" onChange="compSelect()">
+</select>
+<br><textarea id="desc" rows="4" cols="40"></textarea>
+<br><button onClick="getSymb()">Select</button>
+<button onClick="CloseMenu()">Cancel</button>
+<button onClick="deleteLocal()">Delete</button>
+
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="Fomps" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Footprint Selector</span><br>
+<hr>Select a Library:
+<br><select id="flib" size = 1 style="width: 200px;" onChange="flibChange()">
+</select>
+<hr>Select a Footprint:
+<br><select id="foot" size = 5 style="width: 200px;" onChange="footChange()">
+</select>
+<br>Details:
+<br><textarea id="fpdesc" rows="4" cols="20"></textarea>
+<br><input type="button" onClick="useFoot()" value="Use Selected">
+<hr>Footprint:
+<br><input type="text" id="footp" size="20">
+<br><button onClick="setFPAttribute()">Set</button>
+<button onClick="CloseMenu()">Cancel</button>
+<hr><input type="text" id="fpid" size="10">
+<button onClick="setFPAllDevice()">Set for All Device</button>
+
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="ConWiz" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Connector Wizard</span><br>
+<hr>
+Reference Designator <input type="text" id="crefdes" size="3" value="J?">
+<br><br>Number of Pins <input type="text" id="cpins" size="3" value="2">
+<br><br><input type="checkbox" id="chead">Dual Row Header
+<br><input type="checkbox" id="cscrew">Screw Terminal
+<br><br><input type="radio" name="pinside" id="p1" checked>Pins on Right
+<br><input type="radio" name="pinside" id="p2">Pins on Left
+<br><input type="radio" name="pinside" id="p3">Header both sides
+<br><br><button onClick="connSymbol()">Make Symbol</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="BlockWiz" style="visibility : hidden; position : absolute; top : 50pt; left : 10pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Block Symbol Wizard</span><br>
+<hr>
+Reference Designator <input type="text" id="brefdes" size="3" value="U?">
+<br>Device Name <input type="text" id="bname" size="15" value="">
+<br>Start Pin <input type="text" id="bstart" size="2" value="1">
+<br><br>Number of pins on Left Side <input type="text" id="bleft" size="3" value="0">
+<br>Number of pins on Right Side <input type="text" id="bright" size="3" value="0">
+<br>Number of pins on Top <input type="text" id="btop" size="3" value="0">
+<br>Number of pins on Bottom <input type="text" id="bbottom" size="3" value="0">
+<br><br>Minimum Width (in mils) <input type="text" id="bwidth" size="3" value="1500">
+<br>Minimum Height (in mils) <input type="text" id="bheight" size="3" value="500">
+<br><input type="checkbox" id="halfsize">Half Size
+<br><br><button onClick="blockSymbol()">Make Symbol</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="AnalysisWiz" style="visibility : hidden; position : absolute; top : 50p; left : 20px" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Analysis Wizard</span><br>
+<hr>
+<button class="buttonT" onClick="checkAnalyze()">Initialize / Check Design</button>
+<br>
+<fieldset>
+<input type="text" id="limit" size="7" value=".0000001"> NodeCurrent Sum Limit
+<br><input type="text" id="major" size="5" value="5"> Major loop
+<br><input type="text" id="minor" size="5" value="15"> Minor loop
+<br><button class="buttonT" onClick="calculateOperatingPoint()">Calculate DC Operating Point</button>
+<br><div id="analogstat"></div>
+</fieldset>
+<br><button class="buttonT" onClick="toggleVoltages()">Toggle Annotations</button>
+
+<br><button class="buttonT" onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="CompSel" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Object Selector</span><br>
+<hr>Select By Refdes:
+<br><input type="text" size="5" id="selbyref" value = "">
+<br><br><button onClick="selByRef()">Select By Ref</button>
+<br> or
+<hr>Select an Object:
+<br><select id="objs" size = 1 style="width: 200px;">
+</select>
+<br><br><button onClick="selObject()">Select</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="ProjFileSel" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Open Project File</span><br>
+<hr>Open file:
+<br><select id="pfilelist" size = 1 style="width: 200px;">
+</select>
+<br><br><button onClick="openProjectFile()">Open</button>
+<button onClick="CloseMenu()">Cancel</button>
+<button onClick="deleteLocal2()">Delete</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="NEWATT" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Add an Attribute</span><br>
+<hr>Standard Attributes:
+<br><select id="alist" size = 1 style="width: 200px;">
+</select>
+<br><button onClick="useStd()">Use Selected Standard</button>
+<br>Attribute Name:<input type="text" id="nattname" size ="15">
+<br>Attribute Value:<input type="text" id="nattvalue" size ="15">
+<br><button onClick="addNewAttribute()">Add</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="NetSel" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Net Segment Selector</span><br>
+<hr>Select Net to Highlight
+<br><input type="text" size="10" id="NetHigh" value="">
+<br><br><button onClick="highlightNet()">Highlight Net</button>
+<br>or
+<hr>Select a Net Segment:
+<br><select id="netobjs" size = 1 style="width: 200px;">
+</select>
+<br><br><button onClick="selNet()">Select</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="BusSel" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Bus Selector</span><br>
+<hr>Select a Bus:
+<br><select id="busobjs" size = 1 style="width: 200px;">
+</select>
+<br><br><button onClick="selBus()">Select</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="PinSel" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Pin Selector</span><br>
+<hr>Select a Pin:
+<br><select id="pinzsel" size = 1 style="width: 200px;">
+</select>
+<br><br><button onClick="selPin()">Select</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="Log" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Project Login</span><br>
+<form name="login">
+<hr>Enter User Name:
+<br><input type="text" id="logu" placeholder="User Name" size ="15" value="" >
+<br>Enter Password:
+<br><input type="password" id="logp" placeholder="Password" size ="15" value="" onkeydown="goLog(event)" >
+</form>
+<br><br><button onClick="logOK()">OK</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="NetlistOps" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Netlist Options</span><br>
+<hr>Select Format:
+<br><input type="radio" name="nlsel" id="nl1" checked >gEDA Netlist Format
+<br><input type="radio" name="nlsel" id="nl3" >PADS Netlist Format
+<br><input type="radio" name="nlsel" id="nl4" >KiCad Netlist Format
+<br><input type="radio" name="nlsel" id="nl2" >VHDL
+<br><input type="radio" name="nlsel" id="nl5" >HW Model
+<!--<br><input type="radio" name="nlsel" id="nl6" >JSON -->
+<br><br><button onClick="genNetlist()">Generate</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="OpenProj" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Open Project</span><br>
+<hr>Select Service:
+<br><input type="radio" name="prsel" id="pr1" checked onClick="updateProjectList()">LOCAL
+<fieldset>
+<input type="radio" name="prsel" id="pr3" onClick="updateProjectList()">Project URL
+<br><input type="text" id="exurl" size ="20" value="" >
+<br><button onClick="updateProjectList()">Update</button>
+</fieldset>
+<br>
+<fieldset>
+<input type="radio" name="prsel" id="pr2" onClick="updateProjectList()">eo Demos
+<!--
+<br><input type="radio" name="prsel" id="pr4" onClick="updateProjectList()">Drive
+<button id="authorize-button" style="display: none;" onclick="handleAuthClick()">Drive Authorize</button>
+<button id="signout-button" style="display: none;" onclick="handleSignoutClick()">Drive Sign Out</button>
+-->
+<hr>Select Project:
+<br><select id="pjs" size = 1 style="width: 200px;">
+</select>
+</fieldset>
+<br><button onClick="openSelProj()">Select</button>
+<button onClick="cancelOpenProj()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="ProjEdit" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Project Edit</span><br>
+<br><br><input type="text" size="15" id="company" value="eightolives">Company
+<br><input type="text" size="15" id="designname" value="Design A">Design Name
+<br><input type="text" size="15" id="version" value="-">Version
+<br><input type="text" size="15" id="date" value="-">Date
+<br><input type="text" size="15" id="author" value="-">Author
+<br><input type="text" size="15" id="copyright" value="copyright (c) 2026 eightolives, All rights reserved.">Copyright
+<br><input type="text" size="15" id="gnd" value="-">Ground Plane Signal
+<br><input type="text" size="15" id="pwr" value="-">Power Plane Signal
+<br><br><button onClick="updateProj()">Update</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="OpenFile" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Open File</span><br>
+<hr>Select File:
+<br><input type="file" id="files" name="files[]" accept=".sch,.sho,.sym,.lib,.xml,.kicad_sym,.kicad_sch,.net,.vhd,.txt">
+<br><br>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="NeedSymbol" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue" >Manually Find Symbol</span><br>
+<hr>Select File:
+<br><span style="background-color:#696969"><input type="file" id="symfiles" name="symfiles[]" ></span>
+<br><br>
+<button onClick="cancelNeedSym()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="NewSheet" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Make a New Sheet</span><br>
+<br><input type="radio" name="newsheets" id="tbno">No Title Block
+<br><input type="radio" name="newsheets" id="tbA" checked>A size Title Block
+<br><input type="radio" name="newsheets" id="tbB">B size Title Block
+
+<br><br>
+<button onClick="newSheet(true)">Make New Sheet</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="UploadFile" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Save File</span><br>
+<hr>Select File:
+<form action="./upload" enctype="multipart/form-data" method="post">
+<input type="file" id="UPLOAD" name="UPLOAD">
+<br><br><input type="submit" value="Upload">
+<input type="button" value="Cancel" onClick="CloseMenu()">
+</form>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="Cedit" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+Component Editor
+<hr>x:<input type="text" size="5" id="ceditx">
+<br>y:<input type="text" size="5" id="cedity">
+<hr><input type="text" size="5" id="ceditx2">[x2 / width / show / whichend]
+<br><input type="text" size="5" id="cedity2">[y2 / height / value / pintype]
+<select id="fillselect">
+<option selected>No fill</option>
+<option>Solid fill</option>
+</select>
+<hr>component filename:<br><input type="text" size="15" id="ceditf">
+<br><br><button onClick="ceditOK()">OK</button>
+<button onClick="CloseMenu()">Cancel</button>
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="Atts" style="visibility : hidden; position : absolute; top : 50pt; left : 20pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Attribute Editor</span><br>
+<div id="attt" style="overflow:scroll; width:240px; height:100px">
+</div>
+<br>X:<input type="text" id="attx" size="4">&nbsp;Y:<input type="text" id="atty" size="4">
+<br>Font Size:<input type="text" id="attfontsize" size="3">
+Align:<select size = 1 id="attalign"><option>L</option><option>1</option><option>2</option><option>C</option>
+<option>4</option><option>5</option><option>R</option><option>7</option><option>8</option>
+</select>
+<br><input type="checkbox" id="attvisible">Visible &nbsp;&nbsp;&nbsp;
+Angle:<select size = 1 id="attangle"><option selected>0</option><option>90</option><option>180</option><option>270</option>
+</select>
+<br><input type="checkbox" id="showatt">Show Attribute
+<br><input type="checkbox" id="showvalue">Show Value
+<br>Color Index 
+<br><select size = 1 id="attindex">
+<option>BACKGROUND_COLOR</option>
+<option>PIN_COLOR</option>
+<option>NET_ENDPOINT_COLOR</option>
+<option>GRAPHIC_COLOR</option>
+<option>NET_COLOR</option>
+<option>ATTRIBUTE_COLOR</option>
+<option>LOGIC_BUBBLE_COLOR</option>
+<option>DOTS_GRID_COLOR</option>
+<option>DETACHED_ATTRIBUTE_COLOR</option>
+<option>TEXT_COLOR</option>
+<option>BUS_COLOR</option>
+<option>SELECT_COLOR</option>
+<option>BOUNDINGBOX_COLOR</option>
+<option>ZOOM_BOX_COLOR</option>
+<option>STROKE_COLOR</option>
+<option>LOCK_COLOR</option>
+<option>OUTPUT_BACKGROUND_COLOR</option>
+<option>FREESTYLE1_COLOR</option>
+<option>FREESTYLE2_COLOR</option>
+<option>FREESTYLE3_COLOR</option>
+<option>FREESTYLE4_COLOR</option>
+<option>JUNCTION_COLOR</option>
+<option>MESH_GRID_MAJOR_COLOR</option>
+<option>MESH_GRID_MINOR_COLOR</option>
+</select>
+<hr><button onClick="editAttOK()">OK</button>
+<button onClick="makeNewAtt()">New</button>
+<button onClick="editAttCancel()">Cancel</button>
+
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="Pins" style="visibility : hidden; position : absolute; top : 50pt; left : 20pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Pin Editor</span><br>
+Valid pintypes are: in, out, io, pwr, clk, pas, (bus), [oc, oe, tp, tri]<br>
+<div id="pinz" style="overflow:scroll; width:100%; height:250px">
+</div>
+<br>
+<hr><button onClick="editPinsOK()">Update Pins</button>
+<button onClick="editPinsCancel()">Cancel</button>
+
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="PathEdit" style="visibility : hidden; position : absolute; top : 50pt; left : 20pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Path Editor</span><br>
+<div id="pathz" style="overflow:scroll; width:100%; height:250px">
+</div>
+<br>
+<hr><button onClick="editPathsOK()">Update Paths</button>
+<button onClick="editPinsCancel()">Cancel</button>
+
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="BusPins" style="visibility : hidden; position : absolute; top : 50pt; left : 20pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Bus Connection Editor</span><br>
+<div id="buspinz" style="overflow:scroll; width:100%; height:250px">
+</div>
+<br>
+<hr><button onClick="editBusPinsOK()">Update Connections</button>
+<button onClick="editPinsCancel()">Cancel</button>
+
+</td></tr></table>
+</fieldset>
+</div>
+
+<div id="BusMem" style="visibility : hidden; position : absolute; top : 50pt; left : 20pt" >
+<fieldset>
+<table class="popupmenu"  ><tr><td class="bookmark">
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<span style="color:blue">Bus Member Editor</span><br>
+<br><select id="busmemz" size = 1 style="width: 200px;">
+</select>
+<!-- <div id="busmemz" style="overflow:scroll; width:100%; height:250px">
+</div> -->
+<br><button onClick="changeSize()">Size</button><input type="text" id="bsize" size="2" value = "">
+<br>
+<hr><button onClick="addMember()">Add</button>
+<button onClick="deleteMember()">Delete</button>
+<button onClick="editPinsCancel()">Cancel</button>
+
+</td></tr></table>
+</fieldset>
+</div>
+
+
+</div>
+
+<div id="CompPix" style="visibility : hidden; position : absolute; top : 50pt; left : 30pt">
+<fieldset>
+<span style="float:right;font-size:10pt"><a href="javascript:CloseMenu()">X</a></span>
+<button onClick="getBIS('eo_gnd_chassis.sym')"><img src="images/zgnd.png" alt="GND chassis"></button>
+<button onClick="getBIS('eo_gnd_tri.sym')"><img src="images/zgnd2.png" alt="GND triangle"></button>
+<button onClick="getBIS('eo_power_generic.sym')"><img src="images/zpwr.png" alt="PWR"></button>
+<button onClick="getBIS('eo_power_3R3V.sym')"><img src="images/zP3R3.png" alt="3.3V"></button>
+<button onClick="getBIS('eo_power_5V.sym')"><img src="images/zP5.png" alt="5V"></button>
+<button onClick="getBIS('eo_resistor.sym')"><img src="images/zr.png" alt="Resistor"></button>
+<button onClick="getBIS('eo_pot.sym')"><img src="images/zzpot.png" alt="Potentiometer"></button>
+<button onClick="getBIS('eo_capacitor.sym')"><img src="images/zc.png" alt="Capacitor"></button>
+<button onClick="getBIS('eo_capacitor_polar.sym')"><img src="images/zzcpol.png" alt="Polarized Capacitor"></button>
+<button onClick="getBIS('eo_inductor.sym')"><img src="images/zl.png" alt="Inductor"></button>
+<button onClick="getBIS('eo_inductor_core.sym')"><img src="images/zzl2.png" alt="Inductor on core"></button>
+<button onClick="getBIS('eo_testpoint.sym')"><img src="images/ztp.png" alt="TestPoint"></button>
+<button onClick="getBIS('eo_diode.sym')"><img src="images/zd.png" alt="Diode"></button>
+<button onClick="getBIS('eo_zener.sym')"><img src="images/zzzener.png" alt="Zener"></button>
+<button onClick="getBIS('eo_npn.sym')"><img src="images/znpn.png" alt="NPN"></button>
+<button onClick="getBIS('eo_pnp.sym')"><img src="images/zpnp.png" alt="PNP"></button>
+<button onClick="getBIS('eo_nmos.sym')"><img src="images/znmos.png" alt="NMOS"></button>
+<button onClick="getBIS('eo_nmos_w_diode.sym')"><img src="images/zznmosd.png" alt="NMOS w/diode"></button>
+<button onClick="getBIS('eo_pmos.sym')"><img src="images/zpmos.png" alt="PMOS"></button>
+<button onClick="getBIS('eo_pmos_w_diode.sym')"><img src="images/zzpmosd.png" alt="PMOS w/diode"></button>
+<button onClick="getBIS('eo_nmos_dual_gate.sym')"><img src="images/zzdualgate.png" alt="Dual gate NMOS"></button>
+<button onClick="getBIS('eo_jfet.sym')"><img src="images/zjfet.png" alt="JFET"></button>
+<button onClick="getBIS('eo_scr.sym')"><img src="images/zzscr.png" alt="SCR"></button>
+<button onClick="getBIS('eo_triac.sym')"><img src="images/zztriac.png" alt="Triac"></button>
+<button onClick="getBIS('eo_offsheetin.sym')"><img src="images/zinL.png" alt="Left input stub"></button>
+<button onClick="getBIS('eo_offsheetoutb.sym')"><img src="images/zoutL.png" alt="Left output stub"></button>
+<button onClick="getBIS('eo_offsheetinb.sym')"><img src="images/zinR.png" alt="Right input stub"></button>
+<button onClick="getBIS('eo_offsheetout.sym')"><img src="images/zoutR.png" alt="Right output stub"></button>
+<button onClick="getBIS('eo_voltage_source.sym')"><img src="images/zv.png" alt="Voltage Source"></button>
+<button onClick="getBIS('eo_current_source.sym')"><img src="images/zi.png" alt="Current Source"></button>
+<button onClick="getBIS('eo_input_port.sym')"><img src="images/zVin.png" alt="Input symbol"></button>
+<button onClick="getBIS('eo_output_port.sym')"><img src="images/zVout.png" alt="Output symbol"></button>
+<button onClick="getBIS('eo_inout_port.sym')"><img src="images/zVbi.png" alt="Bi-directional symbol"></button>
+
+<button onClick="getBIS('eo_battery_2cell.sym')"><img src="images/zzbat.png" alt="Battery (2 cell)"></button>
+<button onClick="getBIS('eo_spst.sym')"><img src="images/zzspst.png" alt="SPST"></button>
+<button onClick="getBIS('eo_dpdt.sym')"><img src="images/zzdpdt.png" alt="DPDT"></button>
+<button onClick="getBIS('eo_spdt.sym')"><img src="images/zzspdt.png" alt="SPDT"></button>
+<button onClick="getBIS('eo_pb_switch_no.sym')"><img src="images/zzpbno.png" alt="Pushbutton N.O."></button>
+<button onClick="getBIS('eo_pushbutton_NC.sym')"><img src="images/zzpbnc.png" alt="Pushbutton N.C."></button>
+<button onClick="getBIS('eo_relay_coil.sym')"><img src="images/zzrelay.png" alt="Relay Coil"></button>
+<button onClick="getBIS('eo_relay_contacts.sym')"><img src="images/zzrelay2.png" alt="Relay Contacts"></button>
+<button onClick="getBIS('eo_xtal.sym')"><img src="images/zzxtal.png" alt="Crystal"></button>
+<button onClick="getBIS('eo_opamp_1.sym')"><img src="images/zzop.png" alt="Op Amp"></button>
+<button onClick="getBIS('eo_opamp_pg.sym')"><img src="images/zzop2.png" alt="Op Amp w/P, G"></button>
+<button onClick="getBIS('eo_jumper.sym')"><img src="images/zzjump.png" alt="Jumper"></button>
+<button onClick="getBIS('eo_xfmr_1.sym')"><img src="images/zzfmr.png" alt="Transformer"></button>
+<button onClick="getBIS('eo_xfmr_stepdn.sym')"><img src="images/zzfmr1.png" alt="Step Down Transformer"></button>
+<button onClick="getBIS('eo_xfmr_2.sym')"><img src="images/zzfmr2.png" alt="Transformer Sec tap"></button>
+<button onClick="getBIS('eo_xfmr_3.sym')"><img src="images/zzfmr3.png" alt="Transformer both taps"></button>
+<button onClick="getBIS('eo_led.sym')"><img src="images/zzled.png" alt="LED"></button>
+<button onClick="getBIS('eo_microphone.sym')"><img src="images/zzmic.png" alt="Mic"></button>
+<button onClick="getBIS('eo_speaker.sym')"><img src="images/zzspkr.png" alt="Speaker"></button>
+<button onClick="getBIS('eo_antenna.sym')"><img src="images/zant.png" alt="Antenna"></button>
+<button onClick="getBIS('eo_two_pin.sym')"><img src="images/z2port.png" alt="Two Port"></button>
+<button onClick="getBIS('eo_bnc.sym')"><img src="images/zcoax.png" alt="Coax"></button>
+<br>
+<button onClick="getBIS('eo_inv.sym')"><img src="images/zinv.png" alt="Inverter"></button>
+<button onClick="getBIS('eo_sim_nand2.sym')"><img src="images/zznand2.png" alt="2 input NAND"></button>
+<button onClick="getBIS('eo_sim_nand3.sym')"><img src="images/zznand3.png" alt="3 input NAND"></button>
+<button onClick="getBIS('eo_sim_nand4.sym')"><img src="images/zznand4.png" alt="4 input NAND"></button>
+<button onClick="getBIS('eo_sim_nor2.sym')"><img src="images/zznor2.png" alt="2 input NOR"></button>
+<button onClick="getBIS('eo_sim_nor3.sym')"><img src="images/zznor3.png" alt="3 input NOR"></button>
+<button onClick="getBIS('eo_sim_nor4.sym')"><img src="images/zznor4.png" alt="4 input NOR"></button>
+<button onClick="getBIS('eo_sim_and2.sym')"><img src="images/zzand2.png" alt="2 input AND"></button>
+<button onClick="getBIS('eo_sim_and3.sym')"><img src="images/zzand3.png" alt="3 input AND"></button>
+<button onClick="getBIS('eo_sim_and4.sym')"><img src="images/zzand4.png" alt="4 input AND"></button>
+<button onClick="getBIS('eo_sim_or2.sym')"><img src="images/zzor2.png" alt="2 input OR"></button>
+<button onClick="getBIS('eo_sim_or3.sym')"><img src="images/zzor3.png" alt="3 input OR"></button>
+<button onClick="getBIS('eo_sim_or4.sym')"><img src="images/zzor4.png" alt="4 input OR"></button>
+<button onClick="getBIS('eo_sim_xor2.sym')"><img src="images/zzxor.png" alt="2 input XOR"></button>
+<button onClick="getBIS('eo_sim_dff.sym')"><img src="images/zzdffrp.png" alt="DFF w/RP"></button>
+<button onClick="getBIS('eo_dffqqnrn.sym')"><img src="images/zdffr.png" alt="DFF w/R"></button>
+<button onClick="getBIS('eo_sim_jk.sym')"><img src="images/zzjkffrp.png" alt="JK w/RP"></button>
+
+<br><button onClick="CloseMenu()">Cancel</button>
+</fieldset>
+</div>
+
+<div style="width:100%;">
+<div class="nav_left" style="float:left">
+<select id="sheets" size = 1 style="width: 40px; border:1px solid;" onChange="selSheet()" title="Sheet Select">
+</select><br><br>
+<button class="buttonT" style="font-size:6pt; background-color:#66ff66;" onClick="xcape()" title="Escape">ESC</button><br><br>
+<button class="buttonT" style="font-size:6pt; " onClick="undo()" title="Undo">UN</button><br>
+<button class="buttonT" style="font-size:6pt; " onClick="redo()" title="Redo">RE</button><br><br>
+<button class="buttonT" style="font-size:8pt;" onClick="zoom(2)" title="Zoom In">+</button><br>
+<button class="buttonT" style="font-size:8pt;" onClick="zoom(0.5)" title="Zoom Out">-</button>
+<br><br>
+<button class="buttonT" style="font-size:8pt;" onClick="menu('CompPix')" title="Symbols">SB</button><br>
+<button class="buttonT"  onClick="componentSelector()" title="Component Select"><img width="18" height="18" src="images/comps.png" alt="Comp"></button>
+<br><br>
+<button class="buttonT" style="height:20px;" onClick="place(0)" title="Net"><img width="15" height="10" src="images/tnet.png" alt="Net"></button>
+<br><br>
+<button class="buttonT" style="height:20px;" onClick="place(9)" title="Bus"><img width="15" height="10" src="images/tbus.png" alt="Bus"></button>
+<br><br><br>
+<!--
+<button class="buttonT" style="height:20px;" onClick="place(2)" title="Text"><img width="15" height="10" src="images/ttext.png" alt="Text"></button>
+<br>
+<button class="buttonT" style="height:20px;" onClick="place(3)" title="Line"><img width="15" height="10" src="images/tline.png" alt="Line"></button>
+<br>
+<button class="buttonT" style="height:20px;" onClick="place(4)" title="Box"><img width="15" height="10" src="images/trect.png" alt="Rect"></button>
+<br>
+<button class="buttonT" style="height:20px;" onClick="place(5)" title="Circle"><img width="15" height="10" src="images/toval.png" alt="Ovl"></button>
+<br>
+<button class="buttonT" style="height:20px;" onClick="place(6)" title="Arc"><img width="15" height="10" src="images/tarc.png" alt="Arc"></button>
+<button onClick="getBIS('eo_two_pin.sym')"><img src="images/z2port.png" alt="Two Port"></button>
+<br>
+<button class="buttonT" style="height:20px;" onClick="place(10)" title="Path"><img width="15" height="10" src="images/tpath.png" alt="Path"></button>
+<br>
+<button class="buttonT" style="height:20px;" onClick="place(8)" title="Picture"><img width="15" height="10" src="images/tpix.png" alt="Picture"></button>
+<br>
+<button class="buttonT"  onClick="place(7)" title="Pin"><img width="15" height="10" src="images/tpin.png" alt="Pin"></button>
+-->
+</div>
+
+<!--
+<script >
+document.write("<div id=\"cid\" style=\"overflow:scroll; width:80%; height:" + canvasheight + "px\">\n");
+document.write("<canvas id=\"mc\" width=\"" + MAXWIDTH/MAXZOOMFF + "\" height=\"" + MAXHEIGHT/MAXZOOMFF + "\" style=\"background-color: black\" ></canvas>\n</div>\n");
+</script>
+-->
+
+<!--<div id="cid" style="overflow:scroll; width:90%; height:450px;"> -->
+<div id="cid" style="overflow:scroll; width:85%; height:80%;">
+<canvas id="mc" style="background-color: black" ></canvas>
+</div>
+</div>
+
+
+
+<div style="overflow:auto;  margin-left:10px;margin-right:10px; padding:5px;">
+<fieldset>
+<label for="status"></label><input type="text" size="35" style="font-size:10pt; width:90%;" placeholder="eightolives Schematic" onChange="commandLine()" onBlur="commandLine()" id="status">
+<div>
+<label for="XPOS">X = </label><input type="text" size=6 style="font-size:10pt;" id="XPOS">mils;</div><div><label for="YPOS">Y = </label> 
+<input type="text" size=6 style="font-size:10pt;" id="YPOS">mils</div>
+<br>
+</fieldset>
+</div>
+<br>
+<div id="rpt" style="margin-left:10px;margin-right:10px; padding:5px;">
+<fieldset>
+<span style="color:black;"><label for="ta">Report</label></span>
+<br>
+<!--<div class="tt"><span class="ttt">r</span></div>-->
+<textarea id="ta" cols = "45" rows="10" style="width:95%"> </textarea><br>
+<br>
+<button onClick="clearReport()">Clear</button>&nbsp;&nbsp;
+<button onClick="saveReport()">Save</button>&nbsp;&nbsp;
+<button onClick="saveReportLocal()">Save Report Local</button>&nbsp;&nbsp;
+<button onClick="printReportPreview()">Print Preview</button>
+</fieldset>
+</div>
+<br>
+</main>
+<aside>
+
+</aside>
+<footer class="footer">
+eightolives <br>
+<a href="#top"><img src="images/eofavb.png" alt="Top" ></a>
+&nbsp;&nbsp;copyright &copy; 2026 William Kaupinis, All Rights Reserved &nbsp;&nbsp; &nbsp;<a href="https://www.eightolives.com/index.htm">Full Site</a> &nbsp;&nbsp;<a href="https://www.eightolives.com/privacy.htm">Privacy Statement</a> &nbsp;&nbsp;<a href="https://www.eightolives.com/termsofuse.htm">Terms of Use</a> &nbsp;&nbsp;
+<a href="https://www.eightolives.com/feedback.htm" target="g">Feedback</a> &#160;&#160;
+<a href="https://www.eightolives.com/profile.htm">About Us</a>&nbsp;&nbsp;
+<a href="https://jigsaw.w3.org/css-validator/validator?uri=https%3A%2F%2Fwww.eightolives.com%2Fdocs%2FSchematic%2FSchematicM.htm&profile=css3svg&usermedium=all&warning=1&vextwarning=&lang=en">CSS</a>&nbsp;&nbsp;
+<a href="https://validator.w3.org/check?uri=http%3A%2F%2Fwww.eightolives.com%2Fdocs%2FSchematic%2FSchematicM.htm">HTML5</a>
+</footer>
+<div style="visibility : hidden; ">
+
+<iframe name="fg" id="fg" height=200 width=200>
+</iframe>
+
+</div>
+
+<script defer src="js/eo_schematic0.js"></script>
+<script defer src="js/eo_service2.js"></script>
+<script defer src="js/eo_schematic1.js"></script>
+<script defer src="js/eo_schematic2.js"></script>
+<script defer src="js/eo_schematic3.js"></script>
+<script defer src="js/eo_schematic4.js"></script>
+<script defer src="js/base64utils.js"></script>
+<script defer src="js/footprints.js"></script>
+<script defer src="js/eo_symbols.js"></script>
+<script defer src="js/eo_partsList.js"></script>
+<script defer src="js/eo_kicad3.js"></script>
+<script defer src="js/eo_eagle.js"></script>
+<script defer src="js/eo_analog.js"></script>
+<script defer src="js/eo_analysis.js"></script>
+<script defer src="js/xml-js.min.js"></script>
+<script defer src="js/eo_vhdl.js"></script>
+<script defer src="js/eo_vhdl_decoder.js"></script>
+
+<!--
+<script >
+
+//dcolors = new DColors();
+var k = ColoredItemNames.length;
+var i = 0;
+for(i=0; i< k; i ++)
+{
+document.write("<option>" + ColoredItemNames[i] + "</option>");
+}
+</script>
+-->
+</body>
+
+</html>
 
