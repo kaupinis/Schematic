@@ -14,94 +14,363 @@ let ListType = 0;
 
 let FailedLinks = [];
 
+// define symbol entry info
+class SymbolInfo {
+    title = "";
+    link = "";
+    description = "";
+    
+    constructor(title, link, description) {
+        this.title = title;
+        this.link = link;
+        this.description = description;
+    }
+}
+
+class FindSymbol {
+    static FindQueue = [];
+    
+    link = null;
+    project = null;
+    dc = null;
+    
+    constructor(link, project, dc) {
+        this.link = link;
+        this.project = project;
+        this.dc = dc;
+        report("2225 FindSymbol " + link);
+//        this.addToFindQueue(this);
+    }
+    
+    static addToFindQueue(fqi) {
+//        FindSymbol.FindQueue.push(fqi);
+        if((FindSymbol.FindQueue.length == 0) && (FileRequest == null))
+        {
+          FindSymbol.FindQueue.push(fqi);
+          FindSymbol.nextFindItem();
+        }
+        else FindSymbol.FindQueue.push(fqi);
+    }
+
+    static removeFromFindQueue() {
+        if(FindSymbol.FindQueue.length > 0) FindSymbol.FindQueue.splice(0,1);
+        if(FindSymbol.FindQueue.length > 0) FindSymbol.nextFindItem();
+        else
+        {
+//    report("removeFromFindQueue " + ProcessingSch + " " + LastWasSch);
+          if((ProcessingSch == false) && (LastWasSch))
+          {
+            LastWasSch = false;
+            if(SheetLoadErrors) report("Some symbols were not loaded.\nDelete sheet and then try again.");
+            else if(document.getElementById("autofix").checked)
+            {
+	      report("All symbols were loaded.");
+	      fixRefs();
+	      updateNetConnections();
+            }
+          }
+        }
+        repaint();
+        return(FindSymbol.FindQueue.length);
+    }
+
+    static clearFindQueue() {
+        clearArray(FindSymbol.FindQueue);
+        FS_symbol_request = null;
+    }
+    
+    static nextFindItem() {
+        report("nextFindItem FindQueue " + FindSymbol.FindQueue.length + " " + FindSymbol.FindQueue[0].link);
+        if(FindSymbol.FindQueue.length > 0)
+        {
+          let fqi = FindSymbol.FindQueue[0];
+          setTimeout(fqi.start(), 1000); //feeble fix for ipod
+//        fqi.start();
+        }
+        else
+        {
+          SchematicMode = false;
+          report("Find Items Complete");
+          updateNetConnections();
+          updateBuses();
+        }
+    }
+    
+    start() {
+        let fp = null;
+        let d = null;
+        if(this.checkBuiltInLibrary()) FindSymbol.removeFromFindQueue();
+        else
+        {
+          if(this.checkLocalStorage()) FindSymbol.removeFromFindQueue();
+          else
+          {
+            if(this.link.indexOf("file") == 0)
+            {     
+              report("error: FindSymbol with file:/ protocol not supported");
+            }
+            else
+            {
+              this.checkEoLibrary().then( () => {
+                  FindSymbol.removeFromFindQueue();
+              }).catch( (e) => {
+                  if(e == "NotFound")
+                  {
+                    this.checkProjectLibrary().then( () => {
+                        FindSymbol.removeFromFindQueue();
+                    }).catch( (e) => {
+                        if(e == "NotFound")
+                        {
+                          report("FindSymbol failed for " + this.link);
+                          addUniqueStringToArray(this.link, FailedLinks);
+                          if((this.link != ".sym") && (this.link != "null.sym")) this.preload();
+                          else  FindSymbol.removeFromFindQueue();
+                        }
+                        else report("2311 checkProjectLibrary failed " + e);
+                    });
+                  }
+                  else report("2313 checkEoLibrary failed " + e);
+              });
+            }
+          }
+        }
+    }
+            
+    checkLocalStorage() {
+        let b = false;
+        let fp = new FileParser(this.link);
+        let s = localStorage.getItem(this.link);
+        if(!(typeof s === 'undefined') && (s != null))
+        {
+          let d = fp.parse1(s);
+          if(d != null)
+          {
+	    this.dc.addDrawingObjects(d.doj);
+	    this.dc.addAttributes(d.attributes);      
+	    report("found in LOCAL");
+	    b = true;
+          }
+        }
+        return(b);
+    }
+
+    checkBuiltInLibrary() {
+        let k = DemoLib.length;
+        let i = 0;
+        let b = false;
+        let lk = this.link;
+        let j = this.link.lastIndexOf("/");
+        if(j == -1) j = this.link.lastIndexOf("\\");
+        if(j != -1)
+        {
+          lk = this.link.substring(j+1);
+        }
+  
+        while( !b && (i < k))
+        {
+          if(DemoLib[i] == lk) b = true;
+          else i += 1;
+        }
+        
+        if(!b)
+        {
+          k = DemoLibOld.length;
+          i = 0;
+          while( !b && (i < k))
+          {
+            if(DemoLibOld[i] == lk) b = true;
+            else i += 1;
+          }
+        }
+        
+        if(b)// if in demolib
+        {
+          let fp = new FileParser(DemoLib[i]);
+          let d = fp.parse1(DemoLibK[i]);
+          if(d != null)
+          {
+            if(DemoLib[i] == "eo_titleA.sym") this.dc.selectable = 0;
+            else if(DemoLib[i] == "eo_titleB.sym") this.dc.selectable = 0;
+            this.dc.addDrawingObjects(d.doj);
+            this.dc.addAttributes(d.attributes); 
+            FS_symbol_dc = this.dc;
+            report("181 found in Built-in Library");
+          }
+        }
+        else
+        {
+          let f = getBuiltInSymbolIndex(lk);
+          if(f != -1)
+          {
+            b = true;
+            let fp = new FileParser(BuiltIn[f].link);
+            let d = fp.parse1(BuiltIn[f].data);
+            if(d != null)
+            {
+              this.dc.addDrawingObjects(d.doj);
+              this.dc.addAttributes(d.attributes); 
+              FS_symbol_dc = this.dc;
+              report("196 found in Built-in Library");
+            }
+          }
+        }
+        return(b);
+    }
+    
+    checkEoLibrary() {
+        let lk = this.link;
+        let tdc = this.dc;
+        let p = new Promise(function(resolve, reject) {
+            let b = false;
+            let a = getAttributeValue("src", tdc);
+            if(a != null) lk = a;
+            let i = lk.indexOf("eo_symbols");
+            if(i == -1) i = lk.indexOf("eo_sim");
+            if(i == -1) i = lk.indexOf("eo_parts");
+            if(i == -1) i = lk.indexOf("geda");
+//            if(i == -1) // eo server issue
+            
+            if(i != -1)
+            {
+              lk = lk.substring(i);
+            }
+            else
+            {
+              a = getAttributeValue("library", tdc);
+              if((a != null) && (a.indexOf("eo_") != -1)) b = true;
+              report("2419 a = " + a + " b = " + b);
+            }
+
+            let g = null;
+            if((i== -1) && !b)
+            {
+              if(inRefArray(lk, eo_partsList)) 
+              {
+                lk = eo_base + "eo_parts/" + lk;
+                b =true;
+              }
+              else if(inRefArray(lk, eo_simList)) 
+              {
+                lk = eo_base + "eo_sim/" + lk;
+                b =true;
+              }
+              else if(inRefArray(lk, eo_symbolsList)) 
+              {
+                lk = eo_base + "eo_symbols/" + lk;
+                b =true;
+              }
+              else if((g = getInRefArray(lk, gedaList)) != null)
+              {
+                lk = eo_base + "geda/sym/" + g;
+                b =true;
+              }
+              report("2398 lk = " + lk);
+            }
+  
+            if((i != -1) || b)
+            {
+              report("2416 FS checkEoLibrary " + eo_base + " " + lk);
+              getTextData(lk).then( (d) => {
+                  let fp = new FileParser(lk);
+                  let sym = fp.parse1(d);
+                  tdc = sym;
+                  if(FS_symbol_dc == null) 
+                  {
+	            FS_symbol_dc = sym;
+                  }
+                  else
+                  {
+	            FS_symbol_dc.addDrawingObjects(sym.doj);
+	            FS_symbol_dc.addAttributesPermissive(sym.attributes);
+	            repaint();
+                  }
+                  resolve(sym);
+              }).catch((e) => {
+                  reject(e);
+              });
+              FS_symbol_dc = tdc;
+            }
+            else reject("NotFound");
+        });
+        return(p);
+    }
+    
+    checkProjectLibrary() {
+        let lk = this.link;
+        let tdc = this.dc;
+        let p = new Promise(function(resolve, reject) {
+            if(PROJECT_LIB != "LOCAL")
+            {
+              let l = PROJECT_LIB;
+              report("2484 " + l + " : " + lk);
+              let z = l.lastIndexOf("/");
+              if(z != -1)
+              {
+                l = l.substring(0, z) + "/" + lk;
+                report("2489 checking project library for " + l);
+                getTextData(l).then( (d) => {
+                    let fp = new FileParser(lk);
+                    let sym = fp.parse1(d);
+                    tdc = sym;
+                    if(FS_symbol_dc == null) 
+                    {
+	              FS_symbol_dc = sym;
+                    }
+                    else
+                    {
+	              FS_symbol_dc.addDrawingObjects(sym.doj);
+	              FS_symbol_dc.addAttributesPermissive(sym.attributes);
+	              repaint();
+                    }
+                    resolve(sym);
+                }).catch((e) => {
+                    reject(e);
+                });
+                FS_symbol_dc = tdc;
+              }
+              else
+              {
+                reject("NotFound");   
+              }
+            }
+            else 
+            {
+              report("2515 PROJECT_LIB is LOCAL");
+              reject("NotFound");
+            }
+        });
+        return(p);
+    }
+    
+    preload() {
+        let d = this.getBuiltInSymbolComponent("eo_NULL.sym");
+        if(d != null)
+        {
+          let n = this.link.substring(0, this.link.length - 4);
+          if(n.indexOf("eo_") == 0) n = n.substring(3);
+          setAttributeValue("device", d, n);
+          report("2479 " + getAttributeValue("device", d) + " " + d.klass);
+          FS_symbol_dc = d;  
+          this.dc.addDrawingObjects(d.doj);
+          this.dc.addAttributes(d.attributes);
+          removeFromFindQueue();
+        }
+        else report("2485 preload d null");
+    }
+
+
+}
+
+
+
+
 function ProjectServer(link)
 {
     this.link = link;
 }
 
+
 /*
-// function forms an XHR request
-function xhrRequest()
-{
-rqst = new XMLHttpRequest();
-return(rqst);
-}
-
-function createCORSRequest(method, url) {
-  let xhr = new XMLHttpRequest();
-  if ("withCredentials" in xhr) {
-    // XHR for Chrome/Firefox/Opera/Safari.
-    xhr.open(method, url, true);
-  } else if (typeof XDomainRequest != "undefined") {
-    // XDomainRequest for IE.
-    xhr = new XDomainRequest();
-    xhr.open(method, url);
-  } else {
-    // CORS not supported.
-    xhr = null;
-  }
-  return xhr;
-}
-
-// a GET XHR request
-// getXHR automatically inherits Basic Authentication :)
-function getXHR(u, callback)
-{
-nocache = "?nocache=" + Math.random() * 1000000;
-let request = new xhrRequest();
-if("withCredentials" in request) 
-{
-  //request.open("GET", u + nocache, true);
-  request.open("GET", u, true);
-}
-else if (typeof XDomainRequest != "undefined") // IE
-{
-    // XDomainRequest for IE.
-  request = new XDomainRequest();
-  request.open("GET", u);
-} 
-else 
-{
-  // CORS not supported.
-  report("CORS not supported by browser.");
-  request = null;
-}
-if(request != null)
-{
-  if(useAuth && (auth != null)) request.setRequestHeader("Authorization", auth);
-//request.setRequestHeader("Authorization", auth);
-  request.onreadystatechange = callback;
-  request.ontimeout = function () 
-    {
-      console.error("The request for " + u + " timed out.");
-      request = null;
-    };
-  request.timeout = 3000;
-  request.send("");
-}
-return(request);
-}
-
-// a POST XHR request
-// postXHR does not inherit Basic Authentication :(
-// javascript cant read Basic authentication parmeters :(
-function postXHR(u, callback, params)
-{
-alert(auth);
-request = new xhrRequest();
-request.open("POST", u, true);
-request.setRequestHeader("Content-length", params.length);
-//request.setRequestHeader("Authorization", auth);
-request.setRequestHeader("Connection", "close");
-request.onreadystatechange = callback;
-request.ontimeout = function () {
-    console.error("The request for " + u + " timed out.");
-    request = null;
-  };
-request.timeout = 2000;
-request.send(params);
-return(request);
-}
 
 function postUploadXHR(u, callback, filename, data)
 {
@@ -123,26 +392,8 @@ function postUploadXHR(u, callback, filename, data)
   return(request);
 }
 
-// a callback function example
-function mycallback()
-{
-if(req1.readyState == 4)
-  {
-  textData = textData + req1.responseText + "\n";
-  document.getElementById("status").value = textData;
-//  document.getElementById("ta").innerHTML = req1.responseText;
-  req1 = null;
-  }
-}
 */
 
-// define symbol entry info
-function SymbolInfo(title, link, description)
-{
-  this.title = title;
-  this.link = link;
-  this.description = description;
-}
 
 function decodeLocalSymbolList()
 {
@@ -170,13 +421,17 @@ function decodeSymbolList(s, elink)
   if((elink != null) && (elink.indexOf(".json") != -1))
   {
     try {
-    let items = s.items;
-    items.forEach((item) => {
-      li.push(new SymbolInfo(item.title, item.link, item.description));
-    });
+        let keys = Object.keys(s);
+//        report("425 " + keys[0]);
+        if(keys.length == 1)
+        {
+          li = s[keys[0]];   
+//          report("429 " + JSON.stringify(li));
+        }
+        
     }
     catch {
-      report("182 decodeSymbolList error");
+      report("182 decodeSymbolList error for " + elink);
     }
   }
   else if((elink != null) && (elink.indexOf(".dcm") != -1))
@@ -1074,7 +1329,7 @@ function FileParser(name)
   this.xoffset = 0;
   this.yoffset = 0;
   if(this.name === undefined) this.name = "";
-  else if(this.name.indexOf(".sch") != -1)
+  else if((this.name.indexOf(".sch") != -1) || (this.name.indexOf(".sho") != -1))
   {
     ProcessingSch = true; 
     LastWasSch = true;
@@ -1458,6 +1713,7 @@ break;
 		}
 		let ddc = new DComponent(de, Number(this.tokensI[1]) - this.xoffset, Number(this.tokensI[2]) - this.yoffset,this.tokensI[3],this.tokensI[4],this.tokensI[5], this.tokensI[6]);
 		let fs = new FindSymbol(this.tokensI[6], PROJECT_LIB, ddc);
+                FindSymbol.addToFindQueue(fs);
 //		fs.start();
 		this.doj[this.doj.length] = ddc;
 		this.addObject(ddc);
@@ -1932,6 +2188,7 @@ break;
 		}
 		let ddc = new DComponent(de, Number(this.tokensI[1]) - this.xoffset, Number(this.tokensI[2]) - this.yoffset,this.tokensI[3],this.tokensI[4],this.tokensI[5], this.tokensI[6]);
 		let fs = new FindSymbol(this.tokensI[6], PROJECT_LIB, ddc);
+                FindSymbol.addToFindQueue(fs);
 //		fs.start();
 		this.doj[this.doj.length] = ddc;
 		this.addObject(ddc);
@@ -2185,99 +2442,35 @@ if(s != null)
 }
 }
 
+function inProjectsFiles(name)
+{
+    let b = null;
+    let bx = true;
+    let k = ProjectsFileList.length;
+    let i = 0;
+    while(bx && (i < k))
+    {
+        if(ProjectsFileList[i].title.indexOf(name) != -1) 
+        {
+            b = ProjectsFileList[i].link;
+            bx = false;
+        }
+        i += 1;
+    }
+    return(b);
+}
+
+let DFS = null;
+
 let FS_symbol_request = null;
 let FS_symbol_dc = null;
 let DemoLibK = [eo_titleA, gnd, resistor, capacitor, inductor, npn, pnp, eo_diode, pwr, testgate, eo_offsheetin, eo_offsheetinb, eo_offsheetout, eo_offsheetoutb,
   eo_offsheetiol, eo_offsheetior, eo_input_port, eo_output_port, eo_inout_port];
 let slink = null;
 
-function FindSymbol(link, project, dc)
-{
-  this.link = link;
-  this.project = project;
-  this.dc = dc;
-  report("FindSymbol " + link);
-  addToFindQueue(this);
-}
 
-FindSymbol.prototype.checkLocalStorage = function()
-{
-  let b = false;
-  let fp = new FileParser(this.link);
-  let s = localStorage.getItem(this.link);
-  if(!(s === undefined) && (s != null))
-  {
-      let d = fp.parse1(s);
-      if(d != null)
-      {
-	this.dc.addDrawingObjects(d.doj);
-	this.dc.addAttributes(d.attributes);      
-	report("found in LOCAL");
-	b = true;
-      }
-  }
-  return(b);
-}
 
-FindSymbol.prototype.checkBuiltInLibrary = function()
-{
-  let k = DemoLib.length;
-  let i = 0;
-  let b = false;
-  let lk = this.link;
-  let j = this.link.lastIndexOf("/");
-  if(j == -1) j = this.link.lastIndexOf("\\");
-  if(j != -1)
-  {
-    lk = this.link.substring(j+1);
-  }
-  
-  while( !b && (i < k))
-  {
-    if(DemoLib[i] == lk) b = true;
-    else i += 1;
-  }
-  if(!b)
-  {
-    k = DemoLibOld.length;
-    i = 0;
-    while( !b && (i < k))
-    {
-      if(DemoLibOld[i] == lk) b = true;
-      else i += 1;
-    }
-  }
-  if(b)// if in demolib
-  {
-    fp = new FileParser(DemoLib[i]);
-    d = fp.parse1(DemoLibK[i]);
-    if(d != null)
-    {
-      if(DemoLib[i] == "eo_titleA.sym") this.dc.selectable = 0;
-      this.dc.addDrawingObjects(d.doj);
-      this.dc.addAttributes(d.attributes); 
-      report("found in Built-in Library");
-    }
-  }
-  else
-  {
-    let f = getBuiltInSymbolIndex(lk);
-    if(f != -1)
-    {
-      b = true;
-      fp = new FileParser(BuiltIn[f].link);
-      d = fp.parse1(BuiltIn[f].data);
-      if(d != null)
-      {
-        this.dc.addDrawingObjects(d.doj);
-        this.dc.addAttributes(d.attributes); 
-        report("found in Built-in Library");
-      }
-    }
-  }
-  return(b);
-}
-
+/*
 FindSymbol.prototype.checkWebLibrary = function()
 {
   let b = false;
@@ -2301,126 +2494,9 @@ FindSymbol.prototype.checkWebLibrary = function()
   return(b);
 }
 
-function inProjectsFiles(name)
-{
-    let b = null;
-    let bx = true;
-    let k = ProjectsFileList.length;
-    let i = 0;
-    while(bx && (i < k))
-    {
-        if(ProjectsFileList[i].title.indexOf(name) != -1) 
-        {
-            b = ProjectsFileList[i].link;
-            bx = false;
-        }
-        i += 1;
-    }
-    return(b);
-}
 
-let DFS = null;
-
-FindSymbol.prototype.checkProjectLibrary = function()
-{
-  let b = false;
-  if(PROJECT_LIB.indexOf("DRIVE") != -1)
-  {
-    report("Find Symbol DRIVE " + this.link);
-    let bh = null;
-    if((bh = inProjectsFiles(this.link)) != null)
-    {
-        DFS = this;
-        service.openFile(bh);
-        b = true;
-    }
-  }
-  else if(PROJECT_LIB != "LOCAL")
-  {
-    let l = PROJECT_LIB;
-//    let lk = this.link;
-//    let a = getAttributeValue("src", this.dc);
-//    if(a != null) lk = a;
-    report(l + " : " + this.link);
-    let z = l.lastIndexOf("/");
-    if(z != -1)
-    {
-      l = l.substring(0, z) + "/" + this.link;
-      report("checking project library for " + l);
-      let sc = this.symbol_callback;
-      sc.link = l;
-      slink = l;
-//      FS_symbol_request = getXHR(l, this.symbol_callback);
-      FS_symbol_request = getXHR(l, sc);
-      b = true;
-      FS_symbol_dc = this.dc;
-    }
-  }
-  else report("PROJECT_LIB is LOCAL");
-  return(b);
-}
-
-FindSymbol.prototype.checkEoLibrary = function()
-{
-  let b = false;
-  let lk = this.link;
-  let a = getAttributeValue("src", this.dc);
-  if(a != null) lk = a;
-  let i = lk.indexOf("eo_symbols");
-  if(i == -1) i = lk.indexOf("eo_sim");
-  if(i == -1) i = lk.indexOf("eo_parts");
-  if(i == -1) i = lk.indexOf("geda");
-  if(i == -1) // eo server issue
-  {
- //   i = lk.indexOf("eo_");
- //   if(i != -1) lk = "http://www.eightolives.com/docs/Schematic/eo_symbols/" + lk.substring(i);
-  }
-  else 
-  {
-    lk = lk.substring(i);
-  }
-  if(i == -1)
-  {
-    a = getAttributeValue("library", this.dc);
-    if((a != null) && (a.indexOf("eo_") != -1)) b = true;
-  }
-
-  let g = null;
-  if((i== -1) && !b)
-  {
-    if(inRefArray(lk, eo_partsList)) 
-    {
-      lk = eo_base + "eo_parts/" + lk;
-      b =true;
-    }
-    else if(inRefArray(lk, eo_simList)) 
-    {
-      lk = eo_base + "eo_sim/" + lk;
-      b =true;
-    }
-    else if(inRefArray(lk, eo_symbolsList)) 
-    {
-      lk = eo_base + "eo_symbols/" + lk;
-      b =true;
-    }
-    else if((g = getInRefArray(lk, gedaList)) != null)
-    {
-      lk = eo_base + "geda/sym/" + g;
-      b =true;
-    }
-    report("2398 " + lk);
-  }
-  
-  if((i != -1) || b)
-  {
-    report("FS checkEoLibrary " + lk);
-    FS_symbol_request = getXHR(lk, this.symbol_callback);
-    b = true;
-    FS_symbol_dc = this.dc;
-  }
-  return(b);
-}
-
+*/
+                  
 function getInRefArray(s, a)
 {
   let b = false;
@@ -2440,552 +2516,7 @@ function getInRefArray(s, a)
   return(r);
 }
 
-//TODO
-FindSymbol.prototype.start = function()
-{
-  let fp = null;
-  let d = null;
-  let found = false;
-  found = this.checkBuiltInLibrary();
-  if(!found) found = this.checkLocalStorage();
-  
-  if(found) removeFromFindQueue();
-  
-  if(!found)
-  {
-  if(this.link.indexOf("file") == 0)
-  {     
-    report("error: FindSymbol with file:/ protocol not supported");
-  }
-  else found = this.checkEoLibrary();
-  }
-  
-  if(!found)
-  {
-    found = this.checkWebLibrary();
-  }
-  
-  if(!found)
-  {
-    found = this.checkProjectLibrary();
-  }
-  
-  if(!found) 
-  {
-    report("FindSymbol failed for " + this.link);
-    addUniqueStringToArray(this.link, FailedLinks);
-    if((this.link != ".sym") && (this.link != "null.sym")) this.preload();
-    else  removeFromFindQueue();
-  }
- 
-}
 
-FindSymbol.prototype.symbol_callback = function()
-{
-let b = false;
-report("FS symbol callback");
-if(FS_symbol_request === undefined) report("FindSymbol FS_symbol_request is undefined");
-else if(FS_symbol_request == null) report("FindSymbol FS_symbol_request is null");
-else if(FS_symbol_request.readyState == 4)
-  {
-    if(FS_symbol_request.status != "200")
-    {
-      let s  = FS_symbol_request.status.toString();
-      if(s.indexOf("404") != -1) b = true;
-      b = true;
-      report("Unable to access symbol " + FS_symbol_request.status + " " + FS_symbol_request.statusText);
- //     alert("Unable to access symbol " + FS_symbol_request.status + " " + FS_symbol_request.statusText);
-      if(!(this.link === undefined)) needSymbol(this.link);
-      else if(slink != null)
-      {
-	let j = slink.lastIndexOf("/");
-	if(j != -1) slink = slink.substring(j + 1);
-	needSymbol(slink);
-	slink = null;
-      }
-    }
-    else
-    {
-      report("FS got item");
-      let fp = new FileParser(this.link);
-      let sym = fp.parse1(FS_symbol_request.responseText);
-      if(FS_symbol_dc == null) 
-      {
-//	report("FS got here 1");
-	FS_symbol_dc = sym;
-      }
-      else
-      {
-//	report("FS got here 2");
-	FS_symbol_dc.addDrawingObjects(sym.doj);
-	FS_symbol_dc.addAttributesPermissive(sym.attributes);
-	repaint();
-      }
-      b = true;
-    }
-  FS_symbol_request = null;
-  DFS = null;
-  if(b) removeFromFindQueue();
-  }
-
-}
-
-FindSymbol.prototype.preload = function()
-{
-//  needSymbol(this.link);
-  let d = getBuiltInSymbolComponent("eo_NULL.sym");
-  if(d != null)
-  {
-    let n = this.link.substring(0, this.link.length - 4);
-    if(n.indexOf("eo_") == 0) n = n.substring(3);
-    setAttributeValue("device", d, n);
-    report("2479 " + getAttributeValue("device", d) + " " + d.klass);
-    FS_symbol_dc = d;  
-    this.dc.addDrawingObjects(d.doj);
-    this.dc.addAttributes(d.attributes);
-    removeFromFindQueue();
-  }
-  else report("2485 preload d null");
-  
-}
-
-let FindQueue = [];
-let fq = "";
-
-function addToFindQueue(fqi)
-{
-  FindQueue[FindQueue.length] = fqi;
-  if((FindQueue.length == 1) && (FileRequest == null))
-  {
-    nextFindItem();
-  }
-}
-
-function removeFromFindQueue()
-{
-  if(FindQueue.length > 0) FindQueue.splice(0,1);
-  if(FindQueue.length > 0) nextFindItem();
-  else
-  {
-//    report("removeFromFindQueue " + ProcessingSch + " " + LastWasSch);
-    if((ProcessingSch == false) && (LastWasSch))
-    {
-      LastWasSch = false;
-      if(SheetLoadErrors) report("Some symbols were not loaded.\nDelete sheet and then try again.");
-      else if(document.getElementById("autofix").checked)
-      {
-	report("All symbols were loaded.");
-	fixRefs();
-	updateNetConnections();
-      }
-    }
-
-  }
-//  if(FindQueue.length == 0) updateNetConnections();
-  repaint();
- return(FindQueue.length);
-}
-
-function clearFindQueue()
-{
-  clearArray(FindQueue);
-  FS_symbol_request = null;
-}
-
-function nextFindItem()
-{
-  report("nextFindItem FindQueue " + FindQueue.length + " " + FindQueue[0].link);
-  if(FindQueue.length > 0)
-  {
-    let fqi = FindQueue[0];
-    setTimeout(fqi.start(), 1000); //feeble fix for ipod
-//    fqi.start();
-  }
-  else
-  {
-    SchematicMode = false;
-    report("Find Items Complete");
-    updateNetConnections();
-    updateBuses();
-  }
-}
-
-
-/*
-let RssRequest = null;
-let FileRequest = null;
-let FileLink = null;
-let SchematicMode = false;
-let SaveRequest = null;
-
-function getService(baseURL)
-{
-  report("getService " + baseURL);
-  let servic = null;
-  if((baseURL.indexOf("://www.eightolives.com/docs") != -1) || (baseURL.indexOf("://eightolives.com/docs") != -1))
-  {
-    servic = new Service(baseURL);
-    servic.baseURL = baseURL;
-  }
-  else if(baseURL.indexOf(":8081") != -1)
-  {
-    servic = new MicroserverService(baseURL);
-  }
-  if(servic == null) 
-  {
-    report("no service found for " + baseURL);
-  }
-  return(servic);
-}
-
-function Service(base)
-{
-let baseURL = base;
-let capabilities = "readonly";
-}
-
-Service.prototype.login = function(callback)
-{
-
-
-}
-
-Service.prototype.checkLogin = function(callback)
-{
-
-
-}
-
-	  
-Service.prototype.getProjectsList = function()
-{
-  let l = this.baseURL + "projects.rss";
-  report("Service getProjectsList " + l);
-  this.getRSSList(this.baseURL + "projects.rss");
-}
-
-Service.prototype.getRSSList = function(link)
-{
-  if(RssRequest != null) alert("Service RssRequest is busy.");
-  else if(link.indexOf("http") == 0)
-  {
-    RssRequest = getXHR(link, this.rss_callback);
-    RssRequest.elink = link;
-  }
-  else alert("Service getRssList invalid request for " + link);
-}
-
-Service.prototype.rss_callback = function()
-{
-if(RssRequest === undefined) report("rss-callback RssRequest undefined.");
-else if(RssRequest.readyState == 4)
-  {
-    if(RssRequest.status != "200")
-    {
-      report("Service unable to access rss. " + RssRequest.status + " " + RssRequest.statusText);
-      RssRequest = null;
-    }
-    else
-    {
-      decodeSymbolList(RssRequest.responseText, RssRequest.elink);
-      RssRequest = null;
-    }
-     RssRequest = null;
-  }
-}
-
-
-//TODO
-Service.prototype.getProjectFilesList = function(proj)
-{
-  let l = proj;
-//  if(l.indexOf("PROJECT_LIB") != -1) 
-  l = PROJECT_LIB + "files.rss";
-//  else if(l.indexOf("http") != -1) l = proj;
-//  else l = this.baseURL + proj;
-//   let l = this.baseURL + proj + "/files.rss";
-  report("Service getProjectFilesList " + l);
-  this.getRSSList(l);
-}
-
-Service.prototype.openFile = function(link)
-{
-  let kh = -1;
-  report("Service openFile " + link);
-  if(FileRequest != null)
-  {
-   alert("Service FileRequest is busy."); 
-  }
-  else if(link.indexOf("http") == 0)
-  {
-    FileLink = link;
-    if(link.indexOf(".sch") != -1) SchematicMode = true;
-    if(link.indexOf(".lib") != -1)
-    {
-      kh = link.indexOf("?");
-      if(kh != -1)
-      {
-	FileLink = FileLink.substring(0, kh);
-      }
-      
-    }
-    FileRequest = getXHR(FileLink, this.openFileCallback);
-    if(kh != -1)
-    {
-      FileRequest.elink = link.substring(kh +1);
-    }
-  }
-}
-
-Service.prototype.openFileCallback = function()
-{
-if(FileRequest === undefined) ;
-else if(FileRequest.readyState == 4)
-  {
-    if(FileRequest.status != "200")
-    {
-      report("Service unable to access file " + FileRequest.status + " " + FileRequest.statusText + "\n" + FileLink);
-    }
-    else if((FileLink.indexOf(".sch") != -1) || (FileLink.indexOf(".sym") != -1))
-    {
-      let fp = new FileParser(FileLink);
-      let sym = fp.parse1(FileRequest.responseText);
-      if(FileLink.indexOf(".sch") != -1)
-      {
-	newSheet(false);
-	repaint();
-	sheet.addDrawingObjects(sym.doj);
-	sheet.addAttributes(sym.attributes);
-      }
-      else
-      {
-	sheet.selectedObject = sym;
-	sheet.setState(STATE_PLACING);
-      }
-    }
-    else if(FileLink.indexOf(".xml") != -1)
-    {
-      let sym = xmlSymbolParser(FileRequest.responseXML, FileLink);
-      if(sym != null)
-      {
-	sheet.selectedObject = sym;
-	sheet.setState(STATE_PLACING);
-      }
-    }
-    else if((FileLink.indexOf(".js") != -1) || (FileLink.indexOf(".vcd") != -1))
-    {
-      clearReport();
-      report(FileRequest.responseText);
-      window.open(FileLink, "_blank", "status=1,toolbar=1,menubar=1,scrollbars=yes,height=480,width=360");
-    }
-    else if(FileLink.indexOf(".lib") != -1)
-    {
-      let fp = new FileParser(FileLink + "?" + FileRequest.elink);
-      let sym = fp.parsekicad(FileRequest.responseText, FileRequest.elink);
-      sheet.selectedObject = sym;
-      sheet.setState(STATE_PLACING);
-    }
-    else
-    {
-      window.open(FileLink, "_blank", "status=1,toolbar=1,menubar=1,scrollbars=yes,height=480,width=360");
-    }
-  FileRequest = null;
-  }
-  if((FileRequest == null) && (FindQueue.length > 0) && (SchematicMode)) nextFindItem();
-}
-
-Service.prototype.saveFile = function(proj, link, filename, data)
-{
-  if(SaveRequest != null) report("Service Save File Request is busy.");
-  else if(link.indexOf("https") == 0)
-  {
-    SaveRequest = postUploadXHR(link, this.saveFile_callback, filename, data);
-  }
-}
-
-Service.prototype.saveFile_callback = function()
-{
-if(SaveRequest.readyState == 4)
-  {
-    if(SaveRequest.status != "200")
-    {
-      alert("Service unable to save. " + SaveRequest.status + " " + SaveRequest.statusText);
-      SaveRequest = null;
-    }
-    else
-    {
-      SaveRequest = null;
-      nextSaveItem();
-    }
-  }
-}
-
-Service.prototype.saveProjectFile = function(link, filename, data)
-{
-  if(save_request != null) alert("Save Project File Request is busy.");
-  else if(link.indexOf("https") == 0)
-  {
-    report("try saveProjectFile " + link + " " + filename);
-    save_request = postUploadXHR(link, this.saveProjectFile_callback, filename, data);
-  }
-  
-}
-
-Service.prototype.saveProjectFile_callback = function()
-{
-if(save_request.readyState == 4)
-  {
-    if(save_request.status != "200")
-    {
-      report("Service saveProjectFile: Unable to access library " + save_request.status + " " + save_request.statusText);
-//      alert("Service saveProjectFile: Unable to access library " + save_request.status + " " + save_request.statusText);
-      save_request = null;
-      nextSaveItem();
-    }
-    else
-    {
-      save_request = null;
-      nextSaveItem();
-    }
-  }
-}
-
-Service.prototype.getFootprintsList = function(proj)
-{
-  let l = proj + "fplibraries.rss";
-  if(PROJECT_LIB == "LOCAL")
-  {
-    l = this.baseURL + "fplibraries.rss";
-  }
-  report("Service getFootprintsList " + l);
-  ListType = 3;
-  this.getRSSList(l);
-}
-
-
-Service.prototype.getLibrariesList = function(proj)
-{
-  let l = proj + "libraries.rss";
-  if(PROJECT_LIB == "LOCAL")
-  {
-    l = this.baseURL + "libraries.rss";
-  }
-  report("Service getLibrariesList " + l);
-  ListType = 1;
-  this.getRSSList(l);
-}
-
-Service.prototype.getLibraryList = function(proj, plib, serv)
-{
-  let l = proj;
-  if(l.indexOf("PROJECT_LIB") != -1) l = plib + "library.rss";
-  else if(l.indexOf("http") != -1) l = proj;
-  else l = this.baseURL + proj;
-  report("--" + proj + " " + plib + " " + this.baseURL);
-  report("Service getLibraryList " + l);
-  this.getRSSList(l); 
-}
-
-Service.prototype.getLocalSymbol = function(name)
-{
-  
-let fp = new FileParser(name);
-let s = localStorage.getItem(name);
-if(s != null)
-{
-  let d = fp.parse1(s);
-  if(d != null) 
-  {
-    sheet.selectedObject = d;
-    sheet.setState(STATE_PLACING);
-   
-  }
-}
-}
-
-Service.prototype.getSymbol = function(link)
-{
-  let l = link;
-  if(l.indexOf("http") != 0) l = this.baseURL + link;
-  report("Service getSymbol " + l);
-  this.openFile(l); 
-}
-
-MicroserverService.prototype = new Service();
-
-MicroserverService.prototype.constructor = MicroserverService;
-
-function MicroserverService(baseURL)
-{
- this.baseURL = baseURL; 
-}
-
-MicroserverService.prototype.login = function(callback)
-{
-  
-}
-
-MicroserverService.prototype.getProjectsList = function()
-{
-  let l = null;
-  if(this.baseURL.indexOf("/projects/") != -1) l = this.baseURL.substring(0, this.baseURL.length -  9) +"projects.rss" ;
-  else l = this.baseURL + "/projects.rss";
-  report("MicroserverService getProjectsList " + l);
-  this.getRSSList(l);
-}
-
-MicroserverService.prototype.getProjectFilesList = function(proj)
-{
-  let l = proj;
- // let l = this.baseURL + proj + "/files.rss";
-  report("MicroserverService getProjectsFilesList " + l);
-  this.getRSSList(l);
-}
-
-MicroserverService.prototype.getFootprintsList = function(proj)
-{
-  let l = proj + "fplibraries.rss";
-  if(PROJECT_LIB == "LOCAL")
-  {
-    l = this.baseURL.substring(0, this.baseURL.length -  9) +"fplibraries.rss" ;
-  }
-  report("MicroserverService getFootprintsList " + l);
-  ListType = 3;
- this.getRSSList(l);
-}
-
-MicroserverService.prototype.getLibrariesList = function(proj)
-{
-  let l = proj + "libraries.rss";
-  if(PROJECT_LIB == "LOCAL")
-  {
-    l = this.baseURL.substring(0, this.baseURL.length -  9) +"libraries.rss" ;
-  }
-  report("MicroserverService getLibrariesList " + l);
-  ListType = 1;
- this.getRSSList(l);
-}
-
-MicroserverService.prototype.getSymbol = function(link)
-{
-  let l = link;
-  if(l.indexOf("http") != 0) l = this.baseURL + "SchematicM/" + link;
-  report("MicroserverService getSymbol " + l);
-  this.openFile(l); 
-}
-
-MicroserverService.prototype.getLibraryList = function(link, plib, serv)
-{
-  let l = link;
-  report("MicroserverService gll " + link + " " + plib + " " + serv + " " + this.baseURL);
-  if(l.indexOf("http") != -1) ;
-  else if(l.indexOf("PROJECT_LIB") != -1) l = plib;
- // if(l.indexOf("http") != 0) l = this.baseURL + "SchematicM/" + link;
-  report("MicroserverService getLibraryList " + l);
-  ListType = 2;
-  this.getRSSList(l); 
-}
-*/
 
 function Npad(name, surface, plated, isvia, nopaste, nomask, complex, holesize)
 {

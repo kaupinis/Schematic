@@ -1,6 +1,8 @@
 // eo_schematic0.js
+"use strict"
 
 // global variables
+let SchematicFileName = "";
 let canvasheight = 450;
 let canvas = null;
 let ctx; // context
@@ -37,9 +39,11 @@ let PROJECT_FILE_LIST = [];
 let COMP_LIST = [];
 let LIBRARY_LIST = [];
 let FPLIBRARY_LIST = [];
+let SymbolListDest = null;
 let FPS = [];
 let eo_symbol_base = "https://www.eightolives.com/docs/Schematic";
 let eo_base = "https://www.eightolives.com";
+let eo_base0 = null;
 let PROJECT_LIB = "LOCAL";
 let ServerLink = null;
 let ExtServiceLink = "";
@@ -88,6 +92,14 @@ let searchcont = true;
 let searchstate = 0;
 let ht = "";
 let BC = null;
+let Bubble = document.getElementById("bubble");
+let Bubble1 = document.getElementById("bubble1");
+let BTO = null;
+let bBubbleTO = true;
+let SPREC = document.getElementById("sprec");
+let EAUDIO = document.getElementById("eaudio");
+let bSpeechRecg = false;
+
 /*let ColoredItemNames =
     ["BACKGROUND_COLOR", "PIN_COLOR", "NET_ENDPOINT_COLOR", "GRAPHIC_COLOR", "NET_COLOR",
     "ATTRIBUTE_COLOR", "LOGIC_BUBBLE_COLOR", "DOTS_GRID_COLOR",  "DETACHED_ATTRIBUTE_COLOR",
@@ -112,6 +124,8 @@ let LIBRARIES_LOADED = [];
 let MOVEPOINTS = [];
 let ENDPOINT = null;
 let zheaders = null;
+let horiz = null;
+
 if ((navigator.userAgent.indexOf("iPod") != -1) || (navigator.userAgent.indexOf("iPad") != -1) || (navigator.userAgent.indexOf("iPhone") != -1)) {
     apple = true;
     ipod = true;
@@ -133,7 +147,7 @@ function getCurrentSheet() {
 }
 let Menus = ["Welcome", "Nav", "Design", "Edit", "Components", "Preferences", "Help", "Comps", "CompPopup", "DPopup", "NPopup", "PPopup", "BPopup", "PathPopup", "BusSel", "BusMem", "BusPins", "Aboutx", "NetlistOps", "NeedSymbol", "Draw",
     "Atts", "Pins", "CompSel", "NetSel", "Cedit", "NEWATT", "ConWiz", "BlockWiz", "OpenProj", "OpenFile", "UploadFile", "ProjFileSel", "PinSel", "Log", "PPPopup", "PathEdit", "BusPopup",
-    "NetEnd", "BusSize", "Fomps", "NewSheet", "ProjEdit", "CompPix", "AnalysisWiz", "Dummy"];
+    "NetEnd", "BusSize", "Fomps", "NewSheet", "ProjEdit", "CompPix", "AnalysisWiz","Selen","Dummy"];
 function CloseMenu() {
     let k = Menus.length;
     let i = 1;
@@ -317,6 +331,8 @@ function init() {
     clearReport();
     report("Welcome to eightolives Schematic");
     console.log("Welcome to eightolives Schematic");
+    SPREC.checked = false;
+    EAUDIO.checked = false;
     selectPageSize("A");
     let cv = document.getElementById("mc");
     cv.height = MAXHEIGHT / MAXZOOMFF;
@@ -335,12 +351,18 @@ function init() {
     }
     authorizeButton = document.getElementById('authorize-button');
     signoutButton = document.getElementById('signout-button');
+    document.getElementById("sxa").checked = true;
+    document.getElementById("sxc").checked = false;
+    document.getElementById("sxp").checked = true;
+    document.getElementById("sxn").checked = false;
+    
     document.getElementById("fol").checked = false;
     let cid = document.getElementById("cid");
     cid.scrollTop = cid.scrollHeight;
-    clearArray(FindQueue);
+    clearArray(FindSymbol.FindQueue);
     initializeMenus();
     CloseMenu();
+    bVoices = false;
     bsw = true;
     bMouseDownActive = false;
     LIBRARIES_LOADED = [];
@@ -402,7 +424,7 @@ function init() {
         init1();
     }
 }
-function checkSW() {
+function checkSW() { /*
     if (('serviceWorker' in navigator) && bsw) {
         report("serviceWorker is supported");
         let px = navigator.serviceWorker.register('eo_sw_SchematicMobile.js', { scope: './' });
@@ -421,7 +443,7 @@ function checkSW() {
             init1();
         });
     }
-    else
+    else */
         init1();
 }
 function init1() {
@@ -431,11 +453,12 @@ function init1() {
     XSTAT.value = "";
     YSTAT.value = "";
     auth = null;
+    horiz = null;
     SchematicMode = false;
     fullsymbolpath = true;
     document.getElementById("xoffset").value = "0";
     document.getElementById("yoffset").value = "0";
-    ste = new STE();
+    ste = new STE("New_Project");
     sheet = ste.getSchematic().newSheet();
     CurrentSheetIndex = 0;
     SELECTED_PROJECT_INDEX = 0;
@@ -558,6 +581,25 @@ function init1() {
         //document.getElementById("cid").scrollTop = t/z;
         //document.getElementById("cid").scrollLeft = l/z;
         updateipod();
+        
+        initAudio();
+        if((voices.length != 0) && (synth != null)) 
+        {
+          bVoices = true;
+        }
+        else report("no voices available");
+       if(document.getElementById("eaudio").checked)
+       {
+         document.getElementById("sb3").style.visibility = "visible";
+       }
+       else if(bVoices)
+       {
+//         document.getElementById("sb3").style.visibility = "visible";
+         setTimeout(noAudio, 20000);
+       }
+       else document.getElementById("sb3").style.visibility = "hidden";
+  
+
         //updateFootprintsList();
         //flibChange();
         loadinit();
@@ -601,7 +643,12 @@ function loadinit() {
             //    PROJECT_LIB = lfn;
             //    document.getElementById("pr2").checked = true; 
             designfilename = d.substring(d.lastIndexOf("/"));
-            service.openFile(d);
+//            service.openFile(d);
+            getData(d).then( (s) => {
+              processFileData(d, s);
+            }).catch( (e) => {
+                report("608 " + e);
+            });
         }
     }
 }
@@ -817,6 +864,7 @@ function xcape() {
     sheet.setState(STATE_IDLE);
     sheet.selectedObject = null;
     sheet.mc = null;
+    sheet.bcopies = false;
     symbol_request = null;
     symbol_list_request = null;
     clearReport();
@@ -826,7 +874,7 @@ function xcape() {
     FileRequest = null;
     FileLink = null;
     SaveRequest = null;
-    clearArray(FindQueue);
+    clearArray(FindSymbol.FindQueue);
     FS_symbol_request = null;
     SchematicMode = false;
     MOVEPOINTS = [];
@@ -1282,7 +1330,7 @@ function saveProject() {
             bcat = false;
         if (x != -1)
             fn = fn.substring(0, fn.lastIndexOf("__"));
-        if (PROJECT_LIB == "LOCAL") {
+        if ((PROJECT_LIB == "LOCAL") || (PROJECT_LIB.indexOf(eo_base) == 0)) {
             clearReport();
             schsheets = "";
             let k = sheets.length;
@@ -1379,6 +1427,7 @@ let SaveQueueComponentIndex = 0;
 let SaveModelIndex = 0;
 let fn = "";
 let schsheets = null;
+
 function nextSaveItem() {
     report("nextSaveItem SaveQueueSheets " + SaveQueueSheetIndex + " SaveQueueComponents " + SaveQueueComponentIndex);
     if (SaveQueueSheetIndex < SaveQueueSheets.length) {
@@ -1451,13 +1500,35 @@ function saveModelProject() {
                 makeEmptyModels();
         }
         //  else
-        if (PROJECT_LIB != "LOCAL") {
+        if ((PROJECT_LIB != "LOCAL") && (PROJECT_LIB.indexOf(eo_base) != 0)) {
+            report("1460 " + PROJECT_LIB + " " + eo_base);
             //    service.saveProjectFile(PROJECT_LIB + "/upload/", fn, makeHardwareModelofSchematic());
-            service.saveProjectFile(PROJECT_LIB, fn, makeHardwareModelofSchematic());
+            let data= makeHardwareModelofSchematic();
+//            service.saveProjectFile(PROJECT_LIB, fn, data);
+            postUploadP(PROJECT_LIB, fn, data).catch( (e) => { report("1464 " + e); });
         }
     }
     return (n);
 }
+
+function saveSchematic()
+{
+  let n = SchematicFileName;
+  if(n == "") n = getAttributeValue("designname", ste.getSchematic().sheets[0].getTitleSheet()) + ".json";
+  fn = prompt("Enter file name", n);
+  if (fn != null)
+  {
+    clearReport();
+    let data = "";
+    try {
+      data = JSON.stringify(ste.getSchematic().getDataJ(), null, 4);
+    }
+    catch(e) { report("1489 saveSchematic error " + e); }
+    saveFile(fn, data);
+    CloseMenu();
+  }
+}
+
 function saveFile(filename, data) {
     let textFileAsBlob = new Blob([data], { type: 'text/plain' });
     let downloadLink = document.createElement("a");
@@ -1503,30 +1574,13 @@ function openProjectFilesList() {
             i += 1;
         }
     }
-    /*
-    else if(PROJECT_LIB.indexOf("DRIVE") != -1)
-    {
-      SymbolListDest = "pfilelist";
-      if(service == serviceDrive)
-      {
-        let p = service.getProjectFilesList(PROJECT_LIB);
-        p.then(function(data){
-         report("files list length = " + data.length);
-         PROJECT_FILE_LIST = data;
-         showList(data, "pfilelist");
-         }).catch(function(error){
-           report(error);
-         });
-      }
-    }
-    */
     else {
         SymbolListDest = "pfilelist";
         let p = service.getProjectFilesList(PROJECT_LIB);
         p.then(function (data) {
-            let d = decodeSymbolList(data, "a.rss");
-            PROJECT_FILE_LIST = d;
-            showList(d, "pfilelist");
+//            let d = decodeSymbolList(data, "a.rss");
+            PROJECT_FILE_LIST = data.files;
+            showList(PROJECT_FILE_LIST, "pfilelist");
         }).catch(function (error) {
             report(error);
         });
@@ -1569,7 +1623,7 @@ function upload() {
     document.getElementById("UPLOAD").click();
 }
 function openProjectFile() {
-    clearFindQueue();
+    FindSymbol.clearFindQueue();
     let ss = document.getElementById("pfilelist");
     let n = ss.selectedIndex;
     let name = null;
@@ -1742,7 +1796,7 @@ function openProjectFile() {
         });
     }
     else {
-        let lk = PROJECT_LIB + PROJECT_FILE_LIST[n].link;
+        let lk = PROJECT_FILE_LIST[n].link;
         report("1965 openProjectFile a " + lk);
         if (lk.indexOf(".pdf") != -1)
             window.open(lk);
@@ -1751,7 +1805,8 @@ function openProjectFile() {
             if (lk.indexOf(".sch") != -1) {
                 SheetLoadErrors = false;
             }
-            service.openFile(lk).then( (s) => {
+ //           service.openFile(lk).then( (s) => {
+            getData(lk).then( (s) => {
               processFileData(lk, s);
             }).catch( (e) => {
                 report("1751 " + e);
@@ -1787,6 +1842,7 @@ function processFileData(name, s)
     }
     else if ((name.indexOf(".sym") != -1) || (name.indexOf(".sch") != -1)) {
       let d = null;
+      let fp = new FileParser(name);
       if (name.indexOf(".sym") != -1) {
         d = fp.parse1(s);
         if (d != null) {
@@ -1799,11 +1855,13 @@ function processFileData(name, s)
         FailedLinks = [];
         SheetLoadErrors = false;
         if (s.indexOf("<eagle") != -1) {
-          fp = new eagleParser(name);
+          let fp = new eagleParser(name);
           fp.setData(s);
           fp.getSchematic();
         }
         else {
+          let fp = new FileParser(name);
+          let b = false;
           d = fp.parse1(s);
           if (d != null) {
             if (ste.getSchematic().sheets.length == 1) {
@@ -1891,12 +1949,14 @@ function processFileData(name, s)
         fp.updateNets();
       }
     }
+    /*
     else if (name.indexOf(".lib") != -1) {
             let fp = new FileParser( + "?" + name);
             let sym = fp.parsekicad(s, name);
             sheet.selectedObject = sym;
             sheet.setState(STATE_PLACING);
         }
+        */
     else if (name.indexOf(".fp") != -1) {
         saveFile(name, s);
     }
@@ -2053,6 +2113,7 @@ function selSheet() {
     CloseMenu();
     repaint();
 }
+
 let ofname = null;
 let reader = null;
 function openSelFile1(evt) {
@@ -2225,6 +2286,53 @@ function openSelFile1(evt) {
         };
         reader.readAsText(files[0]);
     }
+    else if (ofname.indexOf(".json") != -1) {
+        reader = new FileReader();
+        reader.onload = function (evt) {
+            clearReport();
+//           try{
+            let o = JSON.parse(evt.target.result);
+            if(o.type == "schematic")
+            {
+              ParserJSON.parse(o).then((d) => {
+                  report("2291 " + d.klass);
+//                  ste.setSchematic(d);
+                  sheet = ste.getSchematic().sheets[0];
+//                  report("2300 " + sheet.klass + "  " + sheet.type + " " + ste.getSchematic().sheets.length + " " );
+//                sheet.selectedObject = d;
+//                sheet.setState(STATE_PLACING);
+                  updateSheetDisplay();
+                  repaint();
+                  
+              }); /*.catch( (e) => {
+                  report("2293 " + e);
+              }); */
+            }
+            else if(o.type == "DComponent")
+            {
+              ParserJSON.parse(o).then((d) => {
+                  sheet.selectedObject = d;
+                  sheet.setState(STATE_PLACING);
+              });
+            }
+            else if((o.type == "symbol") || (o.type == "part") || (o.type == "unit") || (o.type == "entity"))
+            {
+              if(horiz == null) horiz = new Horizon(); 
+              let sym = horiz.parse(o);
+              if (sym != null) {
+                sheet.selectedObject = sym;
+                sheet.setState(STATE_PLACING);
+              }
+            }
+            else report("2242 " + o.type + " is not supported");
+//            }
+//            catch(e) {
+//                report("2246 "+ e);
+//            }
+        };
+        reader.readAsText(files[0]);
+   
+    }
     else {
         clearReport();
         report(evt.target.result);
@@ -2252,7 +2360,7 @@ function needSymbol(name) {
 function cancelNeedSym() {
     CloseMenu();
     repaint();
-    removeFromFindQueue();
+    FindSymbol.removeFromFindQueue();
     report("-> Symbol " + symname + " not loaded.");
 }
 function openSelFile2(evt) {
@@ -2264,7 +2372,7 @@ function openSelFile2(evt) {
             report(evt.target.result);
             localStorage.setItem(sofname, evt.target.result);
             report("- saved " + sofname + " to LOCAL " + sofname);
-            removeFromFindQueue();
+            FindSymbol.removeFromFindQueue();
         };
         reader.readAsText(files[0]);
     }
@@ -2294,7 +2402,9 @@ function editMenu(n) {
 function prefMenu(n) {
     CloseMenu();
 }
+
 let mmode = 0;
+
 function addNetVertex() {
     let o = sheet.selectedObject;
     if (o.klass == "DNet") {
@@ -2307,7 +2417,7 @@ function addNetVertex() {
         let y3 = o.getY2();
         o.setX2(xx);
         o.setY2(yy);
-        let n = new DNet(this.de, xx, yy, x3, y3, NET_COLOR);
+        let n = new DNet(de, xx, yy, x3, y3, NET_COLOR);
         setAttributeValue("netname", n, name);
         sheet.selectedObject = n;
         sheet.addDrawingObject(n);
@@ -2325,8 +2435,9 @@ function groupMove(dx, dy) {
         let vd = sheet.getObjectsInArea(sheet.selectbox);
         let k = vd.length;
         let i = 0;
+        let o = null;
         while (i < k) {
-            let o = vd[i];
+            o = vd[i];
             o.setX(o.getX() + dx);
             o.setY(o.getY() + dy);
             o.update();
@@ -2665,8 +2776,10 @@ function copy() {
             let fn = o.filename;
             if ((fn != null) && (fn.indexOf(".sym") != -1)) {
                 report("copy " + fn);
+                sheet.bcopies = true;
                 let ddc = new DComponent(de, 0, 0, 1, 0, 0, fn);
                 let fs = new FindSymbol(fn, PROJECT_LIB, ddc);
+                FindSymbol.addToFindQueue(fs);
                 sheet.selectedObject = ddc;
                 sheet.setState(STATE_PLACING);
             }
@@ -2960,6 +3073,8 @@ function editPathsOK() {
 }
 function editPins() {
     CloseMenu();
+    if(sheet.selectedObject.klass == "DComponent")
+    {
     menu("Pins");
     let t = sheet.selectedObject.getPins();
     let k = t.length;
@@ -3013,11 +3128,12 @@ function editPins() {
         iff.removeChild(iff.firstChild);
     }
     iff.appendChild(tbl);
+    }
 }
 function highlightPin(tblBody, a) {
     let rows = tblBody.children;
     let k = rows.length;
-    i = 0;
+    let i = 0;
     while (i < k) {
         rows[i].style = "background : lightyellow";
         i += 1;
@@ -3146,14 +3262,10 @@ function genNetlist() {
     else if (document.getElementById("nl5").checked)
         generateSchematicHWModel();
     else if (document.getElementById("nl6").checked)
-        generateJSON();
+        saveSchematic();
     CloseMenu();
 }
-function generateJSON() {
-    let sm = ste.getSchematic();
-    clearReport();
-    report(JSON.stringify(sm.getComponents(), null, 4));
-}
+
 function generateKiCadNetlist() {
     CloseMenu();
     if (!ipod) {
@@ -3415,12 +3527,23 @@ function saveSymbol() {
         let n = name.lastIndexOf("/");
         if (n != -1)
             name = name.substring(n + 1);
-        let fn = prompt("Enter symbol file name (.sym)", name);
+        let fn = prompt("Enter symbol file name (.sym or .json)", name);
         if ((fn != null) || (fn != "")) {
-            if (fn.indexOf(".sym") == -1)
+            if(fn.indexOf(".json") != -1)
+            {
+              let d = ss.getDataJ();
+              saveFile(fn, JSON.stringify(d, null, 4));
+            }
+            else
+            {
+              if (fn.indexOf(".sym") == -1)
                 fn += ".sym";
-            ss.filename = fn;
-            saveFile(fn, ss.saveSymbolData());
+              ss.filename = fn;
+              if (fn.indexOf(".sym") != -1)
+              {
+                saveFile(fn, ss.saveSymbolData());
+              }
+            }
         }
     }
 }
@@ -3600,6 +3723,8 @@ function editComponent() {
         }
         if (o.klass == "DComponent") {
             document.getElementById("ceditf").value = o.filename;
+//            let a = getAttribute("device", o);
+//            report("3650 " + o.x + " " + a.x + " " + a.parent.x);
         }
         document.getElementById("fillselect").selectedIndex = x;
     }
@@ -3883,9 +4008,10 @@ function addProjectLibraries() {
     if (service != null) {
         let p = service.getProjectLibrariesList(PROJECT_LIB);
         p.then(function (data) {
+            LIBRARIES_LOADED = [];
             let d = data.libraries; //decodeSymbolList(data, "a.rss");
             let k = d.length;
-            i = 0;
+            let i = 0;
             for (i = 0; i < k; i++) {
                 LIBRARIES_LOADED.push(d[i]);
                 //          report("3966 " + JSON.stringify(d[i], null, 4));
@@ -3980,9 +4106,10 @@ function complibChange() {
             showList(d, "symb");
         }
         else if (link != null) {
-            let p = service.getLibraryList(link, PROJECT_LIB, s);
+            report("3983 link = " + link);
+            let p = getData(link); //getLibraryList(link, PROJECT_LIB, s);
             p.then(function (data) {
-                let d = decodeSymbolList(data, "a.rss");
+                let d = decodeSymbolList(data, link);
                 COMP_LIST = d;
                 showList(d, "symb");
             }).catch(function (error) {
@@ -4058,7 +4185,7 @@ function showList(lis, wher) {
 }
 function clearOptions(id) {
     let ss = document.getElementById(id);
-    i = ss.children.length - 1;
+    let i = ss.children.length - 1;
     while (i >= 0) {
         ss.remove(i);
         i -= 1;
@@ -4194,7 +4321,12 @@ function getSymb() {
                 report("-" + eo_symbol_base + " " + ll + " " + g);
                 link = eo_symbol_base + ll + g;
             }
-            service.getSymbol(link);
+//            service.getSymbol(link);
+            getData(link).then( (s) => {
+              processFileData(link, s);
+            }).catch( (e) => {
+                report("4208 " + e);
+            });
         }
     }
 }
@@ -4565,7 +4697,7 @@ function addMember() {
                 let y = ste.schematic.getNet(s);
                 if (y == null) {
                     y = new Net(s, "");
-                    ste.schematic.netv.push(y);
+                    ste.schematic.nets.push(y);
                 }
                 bus.addMember(y);
             }
@@ -4748,10 +4880,10 @@ function connectBus() {
         ss.remove(i);
         i -= 1;
     }
-    let k = ste.schematic.busarray.length;
+    let k = ste.schematic.buses.length;
     i = 0;
     while (i < k) {
-        let p = ste.schematic.busarray[i];
+        let p = ste.schematic.buses[i];
         let op = document.createElement("option");
         op.text = p.busname;
         ss.add(op);
@@ -4775,8 +4907,8 @@ function selBus() {
             if (ojs.length == 1) {
                 addNetStub();
             }
-            let busname = ste.schematic.busarray[s].busname;
-            let bus = ste.schematic.busarray[s];
+            let busname = ste.schematic.buses[s].busname;
+            let bus = ste.schematic.buses[s];
             pin.connectedSignal = busname;
             pin.update();
             ojs = sheet.getObjectsAt(p2.x + pr.x, p2.y + pr.y);
@@ -5052,15 +5184,16 @@ function loadextfile(filename) {
 function setPlacenear() {
     CloseMenu();
     let s = sheet.selectedObject;
-    PlacenearObject = s;
+//    PlacenearObject = s;
     if (s != null) {
         let fp = getAttributeValue("placenear", s);
         if (fp == null) {
             fp = "";
         }
         let pn = prompt("Enter placenear ref-pinno (e.g. U2-5)", fp);
-        if ((pn != null) && (pn.length > 3)) {
-            report("setting placenear");
+        if(pn.indexOf("-") == -1) alert("Warning: " + pn + " does not specify a pin number.");
+        if (pn != null) {
+            report("setting placenear to " + pn);
             setAttributeValue("placenear", s, pn);
         }
         else
@@ -5100,7 +5233,7 @@ function updateFootprintsList() {
         if (service != null) {
             let p = service.getFootprintsList(eo_base);
             p.then(function (data) {
-                let d = decodeSymbolList(data, "a.rss");
+                let d = data.fplibraries; //decodeSymbolList(data, "a.rss");
                 FPLIBRARY_LIST = d;
                 report("FPLIBRARY_LIST.length = " + FPLIBRARY_LIST.length);
                 showList(d, "flib");
@@ -5113,7 +5246,7 @@ function updateFootprintsList() {
     else {
         let p = service.getFootprintsList(PROJECT_LIB);
         p.then(function (data) {
-            let d = decodeSymbolList(data, "a.rss");
+            let d = data.fplibraries; //decodeSymbolList(data, "a.rss");
             FPLIBRARY_LIST = d;
             report("FPLIBRARY_LIST.length = " + FPLIBRARY_LIST.length);
             showList(d, "flib");
@@ -5127,7 +5260,7 @@ function flibChange() {
     clearOptions("foot");
     let ss = document.getElementById("foot");
     let s = document.getElementById("flib").selectedIndex;
-    let fixedlibraries = 2;
+    let fixedlibraries = 0;
     SELECTED_LIBRARY_INDEX = s;
     //  SymbolListDest = "foot";
     let link = null;
@@ -5180,9 +5313,10 @@ function flibChange() {
         showList(d, "foot");
     }
     else if (link != null) {
-        let p = service.getLibraryList(link, PROJECT_LIB, s);
+        report("5221 link = " + link);
+        let p = getData(link); //service.getLibraryList(link, PROJECT_LIB, s);
         p.then(function (data) {
-            let d = decodeSymbolList(data, "a.rss");
+            let d = decodeSymbolList(data, link);
             FPS = d;
             showList(d, "foot");
         }).catch(function (error) {
@@ -5344,4 +5478,56 @@ function visit() {
         report("visit: " + u);
         let w2 = window.open(u, "g2");
     }
+}
+
+function commandLine()
+{
+}
+
+function saveLocal(fname, data)
+{
+  if(navigator.cookieEnabled) localStorage.setItem(fname, data);
+}
+
+function getLocal(fname)
+{
+  var x = null;
+  if(navigator.cookieEnabled) x = localStorage.getItem(fname);
+  return(x);   
+}
+
+function removeLocal(fname)
+{
+  if(navigator.cookieEnabled) localStorage.removeItem(fname);   
+}
+
+function reportBubble(s)
+{
+  if(s.length < 100)
+  {
+    if(BTO != null) 
+    {
+//      {clearTimeout(BTO); BTO = null;}
+      Bubble1.innerHTML += "<br>" + s;
+    }
+    else
+    {
+      let h = '<span style="float:right;font-size:10pt"><a href="javascript:CloseBubble()">X</a></span><br>';
+      h += s;
+      Bubble1.innerHTML = h;
+      Bubble.style.visibility = "visible";
+    }
+    if(bBubbleTO) BTO = setTimeout(CloseBubble, 10000);
+  }
+}
+
+function CloseBubble()
+{
+  Bubble.style.visibility = "hidden";  
+  BTO = null;
+}
+
+function changedBubble()
+{
+  bBubbleTO = document.getElementById("bVoiceBubble").checked;  
 }

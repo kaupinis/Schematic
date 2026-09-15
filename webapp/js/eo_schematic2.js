@@ -303,7 +303,7 @@ dcomp.attributes[dcomp.attributes.length] = text;
 
 //T 900 100 8 10 1 1 0 0 1
 //copyright=copyright (c) 2016 eightolives
-text = createAttribute(de, 900 + x, 100 + y, 8, 10, 1, 1, 0, 0, "copyright", "copyright (c) 2025 eightolives");
+text = createAttribute(de, 900 + x, 100 + y, 8, 10, 1, 1, 0, 0, "copyright", "copyright (c) 2026 eightolives");
 dcomp.attributes[dcomp.attributes.length] = text;
 
 //B 6400 50 3550 950 15 0 0 0 -1 -1 0 -1 -1 -1 -1 -1
@@ -396,7 +396,7 @@ dcomp.attributes[dcomp.attributes.length] = text;
 
 //T 900 100 8 10 1 1 0 0 1
 //copyright=copyright (c) 2016 eightolives
-text = createAttribute(de, 900 + x, 100 + y, 8, 10, 1, 1, 0, 0, "copyright", "copyright (c) 2025 eightolives");
+text = createAttribute(de, 900 + x, 100 + y, 8, 10, 1, 1, 0, 0, "copyright", "copyright (c) 2026 eightolives");
 dcomp.attributes[dcomp.attributes.length] = text;
 
 //B 6400 50 3550 950 15 0 0 0 -1 -1 0 -1 -1 -1 -1 -1
@@ -484,7 +484,7 @@ while(iii < kkk)
   }
   iii += 1;
 }
-  let buses = ste.schematic.busarray;
+  let buses = ste.schematic.buses;
   let k = buses.length;
   let i = 0;
   while(i < k)
@@ -1425,7 +1425,7 @@ return(sb);
 
 function updateBuses()
 {
-clearArray(ste.schematic.busarray);
+clearArray(ste.schematic.buses);
 let kk = ste.schematic.sheets.length;
 let ii = 0;
 while(ii < kk)
@@ -1695,7 +1695,7 @@ while(ii < kk)
   }
 //  report("renameNets:");			
   renameNets(sp);
-//  clearArray(ste.schematic.netv);
+//  clearArray(ste.schematic.nets);
   k = vdj.length;
   i = 0;
   while(i < k)
@@ -1884,9 +1884,9 @@ while(ii < kk)
     }
     ii += 1;
   }
-  clearArray(ste.schematic.netv);
+  clearArray(ste.schematic.nets);
   newnets.sort(function(a,b) {return(a.netname.localeCompare(b.netname)); });
-  ste.schematic.netv = newnets;
+  ste.schematic.nets = newnets;
 updateBuses();
 return(sb);
 }

@@ -180,6 +180,7 @@ class STE {
   dcolors = DColors;
   projectName = "";
   schematic = null;
+  
   constructor(projectName) {
     dcolors = DColors;
     this.projectName = projectName;
@@ -193,14 +194,23 @@ class STE {
   getSchematic() {
     return(this.schematic);
   }
+  
+  setSchematic(s) {
+      this.schematic = s;
+      this.schematic.ste = this;
+      if((typeof s.pathname !== 'undefined') && (s.pathname != ""))
+      {
+        this.projectName = s.pathname;   
+      }
+  }
 }
 
 // DesignEnvironment
 
 class DE {
-  constructor(sheet)
+  constructor()
   {
-    this.sheet = sheet;
+//    this.sheet = sheet;
     this.inverse_zoom = 10;
     this.grid_size = gridsize;
     this.MAX_X = MAXWIDTH; // mils
@@ -291,96 +301,383 @@ class DE {
   }
 }
 
-function Net(netname, comment)
-{
-  this.klass = "Net";
-  this.netname = netname;
-  this.comment = comment;
-  this.tag = 0;
+// DText
+
+class DText {
+    
+    constructor(de, x, y, colorindex, size, visibility, show_name_value, angle, alignment, num_lines, lines) {
+        this.klass = "DText";
+//        // de = de;
+        this.x = x;
+        this.y = y;
+        this.colorindex = colorindex;
+ // this.color = de.getColor(this.colorindex);
+        this.size = size;
+        this.offset = 0;
+        this.visibility = visibility;
+        this.show_name_value = show_name_value;
+        this.angle = angle;
+        this.alignment = alignment;
+        this.num_lines = num_lines;
+        this.textwidth = 80;
+        this.lines = lines;
+        if(typeof lines === 'undefined') this.lines = "";
+        this.selectBox = this.makeSelectBox();
+        this.selectable = 1;
+        this.name = "";
+        this.value = "";
+        this.attributes = [];
+        this.flip = 0;  // 0 = normal, 1 = horizontal, 2 = vertical
+        this.parent = null;
+    }
+    
+    getDataJ() {
+        let o = {
+            klass: "DText",
+            x: this.x,
+            y: this.y,
+            colorindex: this.colorindex,
+            size: this.size,
+            offset: this.offset,
+            visibility: this.visibility,
+            show_name_value: this.show_name_value,
+            angle: this.angle,
+            alignment: this.alignment,
+            num_lines: this.num_lines,
+            textwidth: this.textwidth,
+            lines: this.lines,
+            selectable: this.selectable,
+            name: this.name,
+            value: this.value,
+            attributes: [],
+            flip: this.flip,
+            parent: null
+        };
+        
+        this.attributes.forEach( (att) => {
+           let pnt = att.parent;
+           att.parent = null;
+           o.attributes.push(att.getDataJ());
+           att.parent = pnt;
+        });
+        return(o);
+    }
+
+    getTextWidth() {
+        return(Math.round(this.value.length * this.size));
+    }
+
+    getX() {
+        return(this.x); 
+    }
+
+    getY() {
+        return(this.y); 
+    }
+	
+    setX(x) {
+        this.x = Math.round(x);
+    }
+
+    setY(y) {
+        this.y = Math.round(y);
+    }
+
+    getVisible() {
+        let b = false;
+        if(this.visibility = 1) b = true;
+        return(b);
+    }
+
+    setVisible(b) {
+        if(b) this.visibility = 1;
+        else this.visibility = 0;
+    }
+
+    setAngle(d) {
+        this.angle = d;
+    }
+
+    setOffset(n) {
+        this.offset = n;
+    }
+
+    update() {
+    }
+
+    isAttribute() {
+        return((this.name != null) && (this.name != "")); 
+    }
+
+    getData() {
+        let sb = "";
+        sb += "T " + R(this.x)  + " " + R(this.y)  + " " + this.colorindex + " " + R(this.size) + " " + this.visibility + " " + this.show_name_value + " " + this.angle + " " + this.alignment + " " + this.num_lines + "\n";
+        let k = this.lines.length;
+        let i = 0;
+        if(this.lines.length != this.num_lines) 
+        {
+//  alert("DText " + this.lines.length + " " + this.num_lines + " " + lines[0]);
+          k = this.num_lines;
+        }
+        if(this.name != "")
+        {
+          sb += this.name + "=" + this.value + "\n";
+        }
+        else
+        {
+          while(i < k)
+          {
+            sb += this.lines[i] + "\n";
+            i += 1;
+          }
+        }
+        // attributes
+        if(this.attributes.length != 0)
+        {
+          sb += "{\n";
+          let k = this.attributes.length;
+          let i = 0;
+          while(i < k)
+          {
+            sb += this.attributes[i].getData();
+            i += 1;
+          }
+          sb += "}\n";
+        }
+        return sb;
+    }
+
+    inRange(xx, yy) { 
+        let b = false;
+        let oc = this.selectBox.outcode(xx, de.correctY(yy));
+        if(oc == 0) b = true;
+        return(b);	
+    }
+
+    makeSelectBox() {
+        this.selectBox = new Rectangle2D();
+        let j = this.size * 10;
+        this.selectBox = this.selectBox.setRect(this.x  , Math.round(de.correctY(this.y))  ,  this.textwidth, j );
+        return(this.selectBox);
+    }
+
+    paint(ctx) {
+        this.dPaint(ctx); 
+    }
+
+    dPaint(ctx) {
+        if(this.visibility == 1)
+        {
+          let z = de.getInverseZoom();
+          this.lines.forEach((s, index) => {
+          ctx.save();
+          ctx.fillStyle = de.getColor(this.colorindex);
+//  ctx.textAlign = "left";
+          if(this.alignment <= 2)  ctx.textAlign = "left";
+          else if(this.alignment <= 5)  ctx.textAlign = "center";
+          else ctx.textAlign = "right";
+          if((this.alignment == 0) || (this.alignment == 3) || (this.alignment == 6)) ctx.textBaseline = "bottom";
+          else if((this.alignment == 1) || (this.alignment == 4) || (this.alignment == 7)) ctx.textBaseline = "middle";
+          else ctx.textBaseline = "top";
+//  alert(this.size);
+          ctx.font = this.size + "px sans-serif"; 
+//  let s = this.lines[0];
+//  this.lines.forEach((s, index) => {
+          if(s != null)
+          {
+            s = s.toString();
+            let i = s.indexOf("=");
+            if(i != -1)
+            {
+              if(this.show_name_value == 1) s = s.substring(i+1);
+              else if(this.show_name_value == 2) s = s.substring(0, i);
+            }
+            let tm = ctx.measureText(s);
+            this.textwidth = Math.round(10 * tm.width);
+            let lineheight = tm.fontBoundingBoxAscent + tm.fontBoundingBoxDescent;
+            let yy = this.y - 10 * index * lineheight;
+//      report("3371 " + index + " " + this.x + ", " + this.y + " " + yy + " " + s);
+            let za = 10/z;
+            let zb = 10/z;
+            if(this.flip == 1) za = -za;
+            else if(this.flip == 2) zb = -zb;
+            ctx.scale( za, zb);
+//      ctx.scale( 10/z, 10/z);
+//            if(typeof this.parent !== 'undefined') report("464 " + this.parent.klass + " " + this.parent.x);
+            if((this.angle != 0)) // && (typeof this.parent !== 'undefined'))
+            {
+//              ctx.translate(-( this.x), -( this.y));
+//              ctx.rotate(Math.PI / 180 * this.angle);
+//              ctx.translate((this.parent.x + this.x), (this.parent.y + this.y));
+            }
+            ctx.fillText(s, this.x / 10, de.correctY(yy) / 10);
+//      ctx.restore();
+            if(this.selectable == 1)
+            {
+              this.selectBox = this.makeSelectBox();
+              if(sheet.getSelectedObject() == this)
+              {
+                this.selectBox.paint(ctx, de.getColor(BOUNDINGBOX_COLOR), de.getInverseZoom());
+              }
+            }
+          }
+          ctx.restore();
+          });
+//  ctx.restore();
+        }
+    }
+}
+   
+class Attribute {
+    att = null;
+    
+    constructor(de, x, y, colorindex, size, visibility, show_name_value, angle, alignment, num_lines, lines) {
+        this.att = new DText(de, x, y, colorindex, size, visibility, show_name_value, angle, alignment, num_lines, lines);
+        return(this.att);
+    }
+    
+    static createAttribute(name, value) {
+        let a = new Attribute(sheet.de,0,0,ATTRIBUTE_COLOR, false,false,0,0,1,[name + "=" + value]);
+        a.name = name;
+        a.value = value;
+        return(a);
+    }
+    
+    getDataJ() {
+        return(this.att.getDataJ());
+    }
+    
 }
 
-function Bus(busname)
-{
-  this.klass = "Bus";
-  this.busname = busname;
-  this.members = []; // am array of Net
-  this.attributes = [];
-  this.comment = "";
-  this.vector = false;
-  this.limit1 = -1;
-  this.limit2 = -1;
-  let i = busname.indexOf("(");
-  if(i != -1)
-  {
-    let k = busname.indexOf(")");
-    if(k != -1)
-    {
-      let j = busname.indexOf(":");
-      if(j != -1)
-      {
-	this.limit1 = busname.substring(i+1, j);
-	this.limit2 = busname.substring(j+1, k);
-	this.vector = true;
-      }
+
+class Net {
+    constructor(netname, comment) {
+        this.klass = "Net";
+        this.netname = netname;
+        this.comment = comment;
+        this.tag = 0;
     }
-  }
 }
 
-Bus.prototype.addMember = function(net)
-{
-  let s = net.netname;
-  let k = this.members.length;
-  let i = 0;
-  let b = true;
-  while(b && (i < k))
-  {
-    if(s == this.members[i].netname)
-    {
-      b = false;
+class Bus {
+    constructor(busname) {
+        this.klass = "Bus";
+        this.busname = busname;
+        this.members = []; // am array of Net
+        this.attributes = [];
+        this.comment = "";
+        this.vector = false;
+        this.limit1 = -1;
+        this.limit2 = -1;
+        let i = busname.indexOf("(");
+        if(i != -1)
+        {
+          let k = busname.indexOf(")");
+          if(k != -1)
+          {
+            let j = busname.indexOf(":");
+            if(j != -1)
+            {
+	      this.limit1 = busname.substring(i+1, j);
+	      this.limit2 = busname.substring(j+1, k);
+	      this.vector = true;
+            }
+          }
+        }
     }
-    i += 1;
-  }
+    
+    getDataJ() {
+        let o = {
+            type: "bus",
+            busname: this.busname,
+            limit1: this.limit1,
+            limit2: this.limit2,
+            vector: this.vector,
+            comment: this.comment,
+            members: this.members,
+            attributes: this.attributes
+        };
+        return(o);
+        
+    }
+
+    addMember(net) {
+        let s = net.netname;
+        let k = this.members.length;
+        let i = 0;
+        let b = true;
+        while(b && (i < k))
+        {
+          if(s == this.members[i].netname)
+          {
+            b = false;
+          }
+          i += 1;
+        }
   
-  if(b)
-  {
-     this.members[this.members.length] = net;
-  }
-}
+        if(b)
+        {
+          this.members[this.members.length] = net;
+        }
+    }
 
-Bus.prototype.getL1 = function()
-{
-  let L1 = getAttributeValue("L1", this);
-  if(L1 == null)
-  {
-    L1 = -1;
-  }
-  return(L1);
-}
+    getL1() {
+        let L1 = getAttributeValue("L1", this);
+        if(L1 == null)
+        {
+          L1 = -1;
+        }
+        return(L1);
+    }
 
-Bus.prototype.getL2 = function()
-{
-  let L2 = getAttributeValue("L2", this);
-  if(L2 == null)
-  {
-    L2 = -1;
-  }
-  return(L2);
+    getL2() {
+        let L2 = getAttributeValue("L2", this);
+        if(L2 == null)
+        {
+          L2 = -1;
+        }
+        return(L2);
+    }
 }
-
 
 class Schematic {
   constructor(ste, projectpath) {
+    this.klass = "Schematic";
     this.ste = ste;
     this.projectpath = projectpath;
-    this.netv = []; // an array of Net
+    this.nets = []; // an array of Net
     this.netnumber = 0;
-    this.netv.splice(0, this.netv.length);
-    this.busarray = [];
+    this.nets.splice(0, this.nets.length);
+    this.buses = [];
     this.busnumber = 0;
-    this.busarray.splice(0, this.busarray.length);
+    this.buses.splice(0, this.buses.length);
     this.sheets = [];
   }
 
+  getDataJ() {
+      let o = {
+          type: "schematic",
+          sheets: [],
+          nets: this.nets,
+          buses: this.buses
+      };
+      
+      this.sheets.forEach( (sheet) => {
+          o.sheets.push(sheet.getDataJ());
+      });
+      /*
+      this.nets.forEach( (net) => {
+          o.nets.push(net.getDataJ());
+      });
+      
+      this.buses.forEach( (bus) => {
+          o.buses.push(bus.getDataJ());
+      });
+      */
+      return(o);
+          
+  }
+  
   newSheet() {
     let sh = new SchematicSheet(this.ste);
     this.sheets.push(sh);
@@ -401,8 +698,8 @@ class Schematic {
 
   getNewNetName() {
     let name = null;
-    while(this.netExists(name = this.getNextNetName(), this.netv)) ;
-    this.netv.push(new Net(name, ""));
+    while(this.netExists(name = this.getNextNetName(), this.nets)) ;
+    this.nets.push(new Net(name, ""));
     return(name);
   }
 
@@ -423,22 +720,22 @@ class Schematic {
 
   addNet(dnet) {
     let s = getAttributeValue("netname", dnet);
-    if((s != null) && (!this.netExists(s, this.netv)))
+    if((s != null) && (!this.netExists(s, this.nets)))
     {
       let sc = getAttributeValue("netcomment", dnet);
       let n = new Net(s, sc);
-      this.netv.push(n);
+      this.nets.push(n);
     }
   }
 
   getNet(netname) {
     let b = true;
     let n = null;
-    let k = this.netv.length;
+    let k = this.nets.length;
     let i = 0;
     while((i < k) && b)
     {
-      let s = this.netv[i];
+      let s = this.nets[i];
       if(s.netname == netname)
       {
         b = false;
@@ -468,17 +765,17 @@ class Schematic {
   }
 
   clearNets() {
-    clearArray(this.netv);
+    clearArray(this.nets);
   }
 
   getBus(busname) {
     let b = true;
     let n = null;
-    let k = this.busarray.length;
+    let k = this.buses.length;
     let i = 0;
     while((i < k) && b)
     {
-      let s = this.busarray[i];
+      let s = this.buses[i];
       if(s.busname == busname)
       {
         b = false;
@@ -513,8 +810,8 @@ class Schematic {
     if(bus == null)
     {
       bus = new Bus(s);
-      this.busarray[this.busarray.length] = bus;
-      report("added bus " + s + " " + this.busarray.length);
+      this.buses[this.buses.length] = bus;
+      report("added bus " + s + " " + this.buses.length);
     }
     let x = getAttributeValue("L1", dbus);
     let y = getAttributeValue("L1", bus);
@@ -651,6 +948,9 @@ class Schematic {
       });
     return(Comps);
   }
+  
+  
+  
 }
 
 function getComponentByRef(ref, comps)
@@ -679,9 +979,9 @@ function getComponentByRef(ref, comps)
 function SchematicSheet(ste)
 {
  this.ste = ste; 
- this.de = new DE(this);
+ this.de = new DE();
  this.klass = "SchematicSheet";
-// this.de = de;
+// // de = de;
  this.DrawingObjects = [];
  this.attributes = [];
  this.grid = true;
@@ -691,8 +991,40 @@ function SchematicSheet(ste)
  this.selectbox = null;
  this.mc = null;
  this.dj = null;
+ this.bcopies = false;
  this.DrawingObjects.splice(0, this.DrawingObjects.length); 
  this.attributes.splice(0, this.attributes.length); 
+}
+
+SchematicSheet.prototype.getDataJ = function()
+{
+  let o = {
+      type: "sheet",
+      doj: [],
+      attributes: [],
+      grid: this.grid,
+      state: this.state,
+      substate: this.substate,
+      mc: this.mc,
+      dj: this.dj,
+      bcopies: this.bcopies
+  }
+  
+  this.DrawingObjects.forEach((oj) => {
+      if(oj.klass == "DComponent") o.doj.push(oj.getDataJ());
+      else if(oj.klass == "DJunction") o.doj.push(oj.getDataJ());
+      else if(oj.klass == "DNet") o.doj.push(oj.getDataJ());
+      else report("929 " + oj.klass);
+  });
+  
+  this.attributes.forEach( (att) => {
+      let pnt = att.parent;
+      att.parent = null;
+      o.attributes.push(att.getDataJ());
+      att.parent = pnt;
+  });
+  
+  return(o);
 }
 
 SchematicSheet.prototype.getData = function()
@@ -746,7 +1078,7 @@ SchematicSheet.prototype.addDrawingObject = function(o)
   {
  o.parent = this;
  o.update();
- this.DrawingObjects[this.DrawingObjects.length] = o; 
+ this.DrawingObjects.push(o); 
   }
 // displayStatus("Added DrawingObject " + this.DrawingObjects.length);
 }
@@ -810,7 +1142,7 @@ SchematicSheet.prototype.setPriorityRoute = function(netname, b)
   }
   else if(b)
   {
-    let a = (new createAttribute(this.de, sheet.selectedObject.x1, sheet.selectedObject.y1, ATTRIBUTE_COLOR, 12, VISIBILITY_INVISIBLE, SHOW_VALUE, 0, 1, "priority_route", netname));
+    let a = (new createAttribute(de, sheet.selectedObject.x1, sheet.selectedObject.y1, ATTRIBUTE_COLOR, 12, VISIBILITY_INVISIBLE, SHOW_VALUE, 0, 1, "priority_route", netname));
     this.addAttribute(a);
 //    report("setPriorityRoute c " + netname + " " + a.value);
   }
@@ -911,14 +1243,14 @@ SchematicSheet.prototype.setState = function(n)
      break;
    case STATE_PIN:
       displayStatus("Drawing Pin");
-      this.selectedObject = new DPin(this.de, 0, 0, 200, 0, PIN_COLOR, 0, 0, 8);
+      this.selectedObject = new DPin(de, 0, 0, 200, 0, PIN_COLOR, 0, 0, 8);
       break;
    case STATE_PICTURE:
      displayStatus("STATE_PICTURE");
      let ps = prompt("Enter URL of picture file:");
      if((ps != null) && (ps != ""))
      {
-       this.selectedObject = new DPicture(this.de, 0, 0, 100, 100, 0,0,0);
+       this.selectedObject = new DPicture(de, 0, 0, 100, 100, 0,0,0);
        this.selectedObject.load(ps);
        this.state = STATE_PLACING;
      }
@@ -973,10 +1305,10 @@ SchematicSheet.prototype.paint = function(ctx)
 SchematicSheet.prototype.paintGrid = function(ctx)
 {
  ctx.save();
- let z = this.de.getInverseZoom();
+ let z = de.getInverseZoom();
  let i = 0;
  let j = 0;
- let gridsize = this.de.getGridSize();
+ let gridsize = de.getGridSize();
  let q = 5;
  let c = 0;
  if(gridsize == 50) q = 10;
@@ -993,7 +1325,7 @@ SchematicSheet.prototype.paintGrid = function(ctx)
   }
   j += 1;
   let line = new Line2D(0,i,MAXWIDTH ,i);
- //line = this.de.setLine(line, 0, i, MAXWIDTH, i);
+ //line = de.setLine(line, 0, i, MAXWIDTH, i);
    line.paint(ctx, c, z);
   i += gridsize;
  }
@@ -1002,7 +1334,7 @@ SchematicSheet.prototype.paintGrid = function(ctx)
  while(i < MAXWIDTH )
  {
  let line = new Line2D(i,0,i,MAXHEIGHT);
- this.de.setLine(line, i, 0, i, MAXHEIGHT);
+ de.setLine(line, i, 0, i, MAXHEIGHT);
  if(j == q)
  {
   c = dcolors.colors[MESH_GRID_MAJOR_COLOR]; //MAJOR_COLOR;
@@ -1033,10 +1365,16 @@ if(this.state == STATE_IDLE)
 {
  let v1 = this.getObjectsAt(de.mouseToDrawingX(mousePos.x), de.mouseToDrawingY(mousePos.y));
  let v = [];
+ /*
  let bcall = document.getElementById("conall").checked;
  let bcomp = document.getElementById("concomp").checked;
  let bcpin = document.getElementById("conpins").checked;
  let bcnet = document.getElementById("connets").checked;
+*/
+ let bcall = document.getElementById("sxa").checked;
+ let bcomp = document.getElementById("sxc").checked;
+ let bcpin = document.getElementById("sxp").checked;
+ let bcnet = document.getElementById("sxn").checked;
  v1.forEach((e) => {
    let f = e.klass;
    if(bcall) v.push(e);
@@ -1166,7 +1504,7 @@ if(this.state == STATE_IDLE)
       else CurrentNetName = n;
       let xxxx = xx; // p2.x;
       let yyyy = yy; // p2.y;
-      this.selectedObject = new DNet(this.de, xxxx, yyyy, xxxx + 1, yyyy + 1, NET_COLOR);
+      this.selectedObject = new DNet(de, xxxx, yyyy, xxxx + 1, yyyy + 1, NET_COLOR);
       this.setNodeNetName(CurrentNetName, xxxx, yyyy);
       this.substate = 6;
      }
@@ -1237,9 +1575,14 @@ else if(this.state == STATE_PLACING)
 	let ad = new AddDrawingObjectCommand(this, this.selectedObject);
 	ad.execute();
 	stack.add(ad);
-	this.selectedObject = null;
-	this.setState(STATE_IDLE);
+        if(this.bcopies) copy();
+        else
+        {
+	  this.selectedObject = null;
+	  this.setState(STATE_IDLE);
+        }
     }
+    report("1505 mc " + this.mc);
     repaint();
   }
 else if(this.substate == 2)
@@ -1268,16 +1611,16 @@ if((this.substate == 0) || (this.substate == 5))
 //    alert("got here " + n);
     if(n == null) n = CurrentNetName;
     else CurrentNetName = n;
-    this.selectedObject = new DNet(this.de, xx, yy, xx + 1, yy + 1, NET_COLOR);
+    this.selectedObject = new DNet(de, xx, yy, xx + 1, yy + 1, NET_COLOR);
     this.setNodeNetName(CurrentNetName, xx, yy);
   }
   else if((this.state == STATE_PATH))
   {
-    this.selectedObject = new DPath(this.de, GRAPHIC_COLOR, 2, 0, 0, 0, 0,0,0,0,0,0,0,0);
+    this.selectedObject = new DPath(de, GRAPHIC_COLOR, 2, 0, 0, 0, 0,0,0,0,0,0,0,0);
     this.selectedObject.setX(xx);
     this.selectedObject.setY(yy);
   }
-  else this.selectedObject = new DLine(this.de, xx, yy, xx + 1, yy +1, GRAPHIC_COLOR, 0, 0, 0, 0, 0);
+  else this.selectedObject = new DLine(de, xx, yy, xx + 1, yy +1, GRAPHIC_COLOR, 0, 0, 0, 0, 0);
   this.substate += 1;
 }
 else if((this.substate == 1) || (this.substate == 6))
@@ -1428,7 +1771,7 @@ else if(this.state == STATE_RECTANGLE)
 {
   if(this.substate == 0)
   {
-	this.selectedObject = new DBox(this.de, xx, yy, xx + 400, yy + 400, GRAPHIC_COLOR, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	this.selectedObject = new DBox(de, xx, yy, xx + 400, yy + 400, GRAPHIC_COLOR, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 //	this.selectedObject.setX(xx);
 //	this.selectedObject.setY(yy);
 	this.substate = 1;
@@ -1453,7 +1796,7 @@ else if(this.state == STATE_CIRCLE)
   if(this.substate == 0)
   {
   this.substate = 1;
-  this.selectedObject = new DCircle(this.de, xx, yy, 100, GRAPHIC_COLOR, 0, 0, 0, 0,0, 0, 0, 0,0, 0, 0);
+  this.selectedObject = new DCircle(de, xx, yy, 100, GRAPHIC_COLOR, 0, 0, 0, 0,0, 0, 0, 0,0, 0, 0);
   }
   else
   {
@@ -1604,7 +1947,7 @@ else if((this.state == STATE_BUS))
       }
       if(bn != null)
       {
-	o.attributes[o.attributes.length] = createAttribute(this.de, o.x1 + 50, o.y1 + 100, ATTRIBUTE_COLOR, o.textsize, VISIBILITY_VISIBLE, SHOW_VALUE, 0, 1, "busname", bn);
+	o.attributes[o.attributes.length] = createAttribute(de, o.x1 + 50, o.y1 + 100, ATTRIBUTE_COLOR, o.textsize, VISIBILITY_VISIBLE, SHOW_VALUE, 0, 1, "busname", bn);
 	let ad = new AddDrawingObjectCommand(this, this.selectedObject);
 	ad.execute();
 	stack.add(ad);
@@ -2040,7 +2383,7 @@ SchematicSheet.prototype.getObjectsAt = function(xxx, yyy)
 //  report("allnets " + allnets + " somenets " + somenets);
   if((!clicker) && allnets && (((somenets > 1) && oneinrange) || (somenets > 2)))
   {
-    this.addDrawingObject(new DJunction(this.de, xx, yy, NET_COLOR));
+    this.addDrawingObject(new DJunction(de, xx, yy, NET_COLOR));
   }
   return(v);
 }
@@ -2127,7 +2470,7 @@ return v;
 // DrawingObjects
 class DrawingObject {
   constructor(de) {
-    this.de = de;
+    // de = de;
     this.klass = "DrawingObject";
     this.selectBox = null;
     this.selectable = true;
@@ -2158,13 +2501,13 @@ function DLine(de, x1, y1, x2, y2, colorindex, width, capstyle, dashstyle, dashl
 {
   this.klass = "DLine";
   this.attributes = [];
-  this.de = de;
+  // de = de;
   this.x1 = Number(x1);
   this.y1 = Number(y1);
   this.x2 = Number(x2);
   this.y2 = Number(y2);
   this.colorindex = Number(colorindex);
-//  this.color = this.de.getColor(this.colorindex);
+//  this.color = de.getColor(this.colorindex);
   this.width = Number(width);
   this.capstyle = Number(capstyle);
   this.dashstyle = Number(dashstyle);
@@ -2174,6 +2517,25 @@ function DLine(de, x1, y1, x2, y2, colorindex, width, capstyle, dashstyle, dashl
   this.selectBox = this.makeSelectBox();
   this.selectable = 1;
   this.c = -1;
+}
+
+DLine.prototype.getDataJ = function()
+{
+  let o = {
+      type: "DLine",
+      x1: this.x1,
+      y1: this.y1,
+      x2: this.x2,
+      y2: this.y2,
+      colorindex: this.colorindex,
+      width: this.width,
+      capstyle: this.capstyle,
+      dashstyle: this.dashstyle,
+      dashspace: this.dashspace,
+      selectable: this.selectable,
+      attributes: this.attributes
+  };
+  return(o);
 }
 
 DLine.prototype.update = function()
@@ -2362,13 +2724,13 @@ function DBox(de, x, y, boxwidth, boxheight, colorindex, width,
 {
   this.klass = "DBox";
   this.attributes = [];
-  this.de = de;
+  // de = de;
   this.x = x;
   this.y = y;
   this.boxwidth = boxwidth;
   this.boxheight = boxheight;
   this.colorindex = colorindex;
-//  this.color = this.de.getColor(this.colorindex);
+//  this.color = de.getColor(this.colorindex);
   this.width = width;
   this.capstyle = capstyle;
   this.dashstyle = dashstyle;
@@ -2382,16 +2744,41 @@ function DBox(de, x, y, boxwidth, boxheight, colorindex, width,
   this.pitch2 = pitch2;
   this.box = new Rectangle2D();
   this.box.filltype = this.filltype;
-  this.box.setRect(x, this.de.correctY(y), this.boxwidth, this.boxheight);
+  this.box.setRect(x, de.correctY(y), this.boxwidth, this.boxheight);
   this.selectBox = this.makeSelectBox();
   this.selectable = 1;
 }
 
+DBox.prototype.getDataJ = function()
+{
+  let o = {
+      type: "DBox",
+      x: this.x,
+      y: this.y,
+      boxwidth: this.boxwidth,
+      boxheight: this.boxheight,
+      colorinde: this.colorindex,
+      width: this.width,
+      capstyle: this.capstyle,
+      dashstyle: this.dashstyle,
+      dashlength: this.dashlength,
+      dashspace: this.dashspace,
+      filltype: this.filltype,
+      fillwidth: this.fillwidth,
+      angle1: this.angle1,
+      pitch1: this.pitch1,
+      angle2: this.angle2,
+      pitch2: this.pitch2,
+      selectable: this.selectable
+  };
+  return(o);
+}
+
 DBox.prototype.update = function()
 {
-//  alert(this.x + " " +  this.de.correctY(this.y) + " " + this.boxwidth +" " + this.boxheight);
+//  alert(this.x + " " +  de.correctY(this.y) + " " + this.boxwidth +" " + this.boxheight);
   this.box.filltype = this.filltype;
-  this.box.setRect(this.x, this.de.correctY(this.y), this.boxwidth, this.boxheight); 
+  this.box.setRect(this.x, de.correctY(this.y), this.boxwidth, this.boxheight); 
   this.makeSelectBox();
 }
 
@@ -2426,13 +2813,13 @@ DBox.prototype.getY = function()
 DBox.prototype.setX = function(x) 
 {
   this.x = x;
-  this.box.setRect(this.x, this.de.correctY(this.y), Number(this.boxwidth), Number(this.boxheight)); 
+  this.box.setRect(this.x, de.correctY(this.y), Number(this.boxwidth), Number(this.boxheight)); 
 }
 
 DBox.prototype.setY = function (y) 
 {
   this.y = y;
-  this.box.setRect(this.x, this.de.correctY(this.y), Number(this.boxwidth), Number(this.boxheight)); 
+  this.box.setRect(this.x, de.correctY(this.y), Number(this.boxwidth), Number(this.boxheight)); 
 }
 
 DBox.prototype.setX2 = function(x2)
@@ -2478,7 +2865,7 @@ return(b);
 DBox.prototype.makeSelectBox = function()
 {
   this.selectBox = new Rectangle2D();
-// alert(this.x + " " +  this.de.correctY(this.y) + " " + this.boxwidth +" " + this.boxheight);
+// alert(this.x + " " +  de.correctY(this.y) + " " + this.boxwidth +" " + this.boxheight);
   this.selectBox = this.selectBox.setRect(this.x - 40 , de.correctY(this.y) + 40  , Number(this.boxwidth) + 80, Number(this.boxheight) + 80 );
   return(this.selectBox);
 }
@@ -2521,12 +2908,12 @@ function DCircle(de, x, y, radius, colorindex, width,
 {
   this.klass = "DCircle";
   this.attributes = [];
-  this.de = de;
+  // de = de;
   this.x = x;
   this.y = y;
   this.radius = radius;
   this.colorindex = colorindex;
- // this.color = this.de.getColor(this.colorindex);
+ // this.color = de.getColor(this.colorindex);
   this.width = width;
   this.capstyle = capstyle;
   this.dashstyle = dashstyle;
@@ -2540,15 +2927,39 @@ function DCircle(de, x, y, radius, colorindex, width,
   this.pitch2 = pitch2;
   this.circle = new Arc2D();
   this.circle.filltype = this.filltype;
-  this.circle.makeArc(this.x, this.de.correctY(this.y), radius, 0, 2 * Math.PI);
+  this.circle.makeArc(this.x, de.correctY(this.y), radius, 0, 2 * Math.PI);
   this.selectBox = this.makeSelectBox();
   this.selectable = 1;
+}
+
+DCircle.prototype.getDataJ = function()
+{
+  let o = {
+      type: "DCircle",
+      x: this.x,
+      y: this.y,
+      radius: this.radius,
+      colorindex: this.colorindex,
+      width: this.width,
+      capstyle: this.capstyle,
+      dashstyle: this.dashstyle,
+      dashlength: this.dashlength,
+      dashspace: this.dashspace,
+      filltype: this.filltype,
+      fillwidth: this.fillwidth,
+      angle1: this.angle1,
+      pitch1: this.pitch1,
+      angle2: this.angle2,
+      pitch2: this.pitch2,
+      selectable: this.selectable
+  };
+  return(o);
 }
 
 DCircle.prototype.update = function()
 {
   this.circle.filltype = this.filltype;
-  this.circle.makeArc(this.x, this.de.correctY(this.y), this.radius, 0, 2 * Math.PI);
+  this.circle.makeArc(this.x, de.correctY(this.y), this.radius, 0, 2 * Math.PI);
   this.selectBox = this.makeSelectBox();
 }
 
@@ -2570,13 +2981,13 @@ DCircle.prototype.getY = function()
 DCircle.prototype.setX = function(x) 
 {
   this.x = x;
-  this.circle.makeArc(this.x, this.de.correctY(this.y), this.radius, 0, 2 * Math.PI);
+  this.circle.makeArc(this.x, de.correctY(this.y), this.radius, 0, 2 * Math.PI);
 }
 
 DCircle.prototype.setY = function (y) 
 {
   this.y = y;
-  this.circle.makeArc(this.x, this.de.correctY(this.y), this.radius, 0, 2 * Math.PI);
+  this.circle.makeArc(this.x, de.correctY(this.y), this.radius, 0, 2 * Math.PI);
 }
 
 DCircle.prototype.getData = function()
@@ -2644,7 +3055,7 @@ DCircle.prototype.dPaint = function(ctx)
 function DPath(de, colorindex, width, capstyle, dashstyle, dashlength, dashspace, filltype, fillwidth, angle1, pitch1, angle2, pitch2, numlines)
 {
   this.klass = "DPath";
-  this.de = de;
+  // de = de;
   this.colorindex = colorindex;
   this.width = width;
   this.capstyle = capstyle;
@@ -2671,6 +3082,48 @@ function DPath(de, colorindex, width, capstyle, dashstyle, dashlength, dashspace
   this.selectBox = this.makeSelectBox();
 }
 
+DPath.prototype.getDataJ = function()
+{
+  let o = {
+      klass: this.klass,
+      colorindex: this.colorindex,
+      width: this.width,
+      capstyle: this.capstyle,
+      dashstyle: this.dashstyle,
+      dashlength: this.dashlength,
+      dashspace: this.dashspace,
+      filltype: this.filltype,
+      fillwidth: this.fillwidth,
+      angle1: this.angle1,
+      pitch1: this.pitch1,
+      angle2: this.angle2,
+      pitch2: this.pitch2,
+      numlines: this.numlines,
+      segments: [],
+      closed: this.closed,
+      attributes: [],
+      selectable: this.selectable,
+      currentLine: this.currentLine,
+      parent: null,
+      x: this.x,
+      y: this.y,
+      mx: this.mx,
+      my: this.my,
+      selectBox: null
+  }
+  this.segments.forEach( (seg) => {
+      o.segments.push(seg.getDataJ());
+  });
+  
+  this.attributes.forEach( (att) => {
+      let pnt = att.parent;
+      att.parent = null;
+      o.attributes.push(att.getDataJ());
+      att.parent = pnt;
+  });
+  return(o);
+}
+
 DPath.prototype.addDrawingObject = function(o)
 {
  report("DPath addDrawingObject " + o.klass); 
@@ -2683,7 +3136,7 @@ DPath.prototype.addLineSegment = function(sx, sy)
   if(this.segments.length == 0)
   {
   report("2617 DPath addLineSegment length = " + this.segments.length + " " + this.x + " " + this.y + " " + sx + " " + sy);
-//    ln = new DLine(this.de, this.x, this.y, sx, sy, this.colorindex, this.width, this.capstyle, this.dashstyle, this.dashlength,this.dashspace);
+//    ln = new DLine(de, this.x, this.y, sx, sy, this.colorindex, this.width, this.capstyle, this.dashstyle, this.dashlength,this.dashspace);
     ln = new Line2D(this.x,de.correctY(this.y),sx,de.correctY(sy));
     ln.selectable = 0;
   }
@@ -2692,7 +3145,7 @@ DPath.prototype.addLineSegment = function(sx, sy)
     let rx = this.segments[this.segments.length -1].x2;
     let ry = de.correctY(this.segments[this.segments.length -1].y2);
   report("DPath addLineSegment length = " + this.segments.length + " " + rx + " " + ry + " " + sx + " " + sy);
-//    ln = new DLine(this.de, rx, ry, sx, sy, this.colorindex, this.width, this.capstyle, this.dashstyle, this.dashlength,this.dashspace);
+//    ln = new DLine(de, rx, ry, sx, sy, this.colorindex, this.width, this.capstyle, this.dashstyle, this.dashlength,this.dashspace);
     ln = new Line2D(rx,de.correctY(ry),sx,de.correctY(sy)); 
     ln.selectable = 0;
   }
@@ -2918,14 +3371,14 @@ function DArc(de, x, y, radius, startangle, sweepangle, colorindex, width,
 {
   this.klass = "DArc";
   this.attributes = [];
-  this.de = de;
+  // de = de;
   this.x = x;
   this.y = y;
   this.radius = radius;
   this.startangle = startangle;
   this.sweepangle = sweepangle;
   this.colorindex = colorindex;
- // this.color = this.de.getColor(this.colorindex);
+ // this.color = de.getColor(this.colorindex);
   this.width = width;
   this.capstyle = capstyle;
   this.dashstyle = dashstyle;
@@ -2935,10 +3388,36 @@ function DArc(de, x, y, radius, startangle, sweepangle, colorindex, width,
   this.arc = new Arc2D();
   this.ang2 = Number(startangle) + Number(sweepangle);
   if(this.ang2 > 360) this.ang2 -= 360;
-  this.arc.makeArc(this.x, this.de.correctY(this.y), radius, startangle /180 * Math.PI, this.ang2 /180 * Math.PI);
+  this.arc.makeArc(this.x, de.correctY(this.y), radius, startangle /180 * Math.PI, this.ang2 /180 * Math.PI);
   this.selectBox = this.makeSelectBox();
   this.selectable = 1;
   
+}
+
+DArc.prototype.getDataJ = function()
+{
+  let o = {
+      type: "DArc",
+      x: this.x,
+      y: this.y,
+      radius: this.radius,
+      startangle: this.startangle,
+      sweepangle: this.sweepangle,
+      colorindex: this.colorindex,
+      width: this.width,
+      capstyle: this.capstyle,
+      dashstyle: this.dashstyle,
+      dashlength: this.dashlength,
+      dashspace: this.dashspace,
+      filltype: this.filltype,
+      fillwidth: this.fillwidth,
+      angle1: this.angle1,
+      pitch1: this.pitch1,
+      angle2: this.angle2,
+      pitch2: this.pitch2,
+      selectable: this.selectable
+  };
+  return(o);
 }
 
 DArc.prototype.update = function()
@@ -2946,7 +3425,7 @@ DArc.prototype.update = function()
   this.ang2 = Number(this.startangle) + Number(this.sweepangle);
   if(this.ang2 > 360) this.ang2 -= 360;
   this.arc.filltype = this.filltype;
-  this.arc.makeArc(this.x, this.de.correctY(this.y), this.radius, this.startangle /180 * Math.PI, this.ang2 /180 * Math.PI);
+  this.arc.makeArc(this.x, de.correctY(this.y), this.radius, this.startangle /180 * Math.PI, this.ang2 /180 * Math.PI);
   this.selectBox = this.makeSelectBox();
 }
 
@@ -2963,13 +3442,13 @@ DArc.prototype.getY = function()
 DArc.prototype.setX = function(x) 
 {
   this.x = x;
-  this.arc.makeArc(this.x, this.de.correctY(this.y), this.radius, this.startangle /180 * Math.PI, this.ang2 /180 * Math.PI);
+  this.arc.makeArc(this.x, de.correctY(this.y), this.radius, this.startangle /180 * Math.PI, this.ang2 /180 * Math.PI);
 }
 
 DArc.prototype.setY = function (y) 
 {
   this.y = y;
-  this.arc.makeArc(this.x, this.de.correctY(this.y), this.radius, this.startangle /180 * Math.PI, this.ang2 /180 * Math.PI);
+  this.arc.makeArc(this.x, de.correctY(this.y), this.radius, this.startangle /180 * Math.PI, this.ang2 /180 * Math.PI);
 }
 
 
@@ -3188,220 +3667,18 @@ Arc2D.prototype.paint = function(ctx, color, z)
     ctx.restore();
 }
 
-// DText
-function DText(de, x, y, colorindex, size, visibility, show_name_value, angle, alignment, num_lines, lines)
-{
-  this.klass = "DText";
-  this.de = de;
-  this.x = x;
-  this.y = y;
-  this.colorindex = colorindex;
- // this.color = this.de.getColor(this.colorindex);
-  this.size = size;
-  this.offset = 0;
-  this.visibility = visibility;
-  this.show_name_value = show_name_value;
-  this.angle = angle;
-  this.alignment = alignment;
-  this.num_lines = num_lines;
-  this.textwidth = 80;
-  this.lines = lines;
-  this.selectBox = this.makeSelectBox();
-  this.selectable = 1;
-  this.name = "";
-  this.value = "";
-  this.attributes = [];
-  this.flip = 0;  // 0 = normal, 1 = horizontal, 2 = vertical
-}
-
-//TODO
-DText.prototype.getTextWidth = function()
-{
-  return(this.value.length * this.size);
-}
-
-DText.prototype.getX = function()
-{
- return(this.x); 
-}
-
-DText.prototype.getY = function()
-{
- return(this.y); 
-}
-	
-DText.prototype.setX = function(x) 
-{
-  this.x = Math.round(x);
-}
-
-DText.prototype.setY = function (y) 
-{
-  this.y = Math.round(y);
-}
-
-DText.prototype.getVisible = function ()
-{
-  let b = false;
-  if(this.visibility = 1) b = true;
-  return(b);
-}
-
-DText.prototype.setVisible = function (b)
-{
-  if(b) this.visibility = 1;
-  else this.visibility = 0;
-}
-
-DText.prototype.setAngle = function (d)
-{
-  this.angle = d;
-}
-
-DText.prototype.setOffset = function (n)
-{
-  this.offset = n;
-}
-
-DText.prototype.update = function () 
-{
-}
-
-DText.prototype.isAttribute = function()
-{
- return((this.name != null) && (this.name != "")); 
-}
-
-DText.prototype.getData = function() 
-{
-let sb = "";
-sb += "T " + R(this.x)  + " " + R(this.y)  + " " + this.colorindex + " " + R(this.size) + " " + this.visibility + " " + this.show_name_value + " " + this.angle + " " + this.alignment + " " + this.num_lines + "\n";
-let k = this.lines.length;
-let i = 0;
-if(this.lines.length != this.num_lines) 
-{
-//  alert("DText " + this.lines.length + " " + this.num_lines + " " + lines[0]);
-  k = this.num_lines;
-}
-if(this.name != "")
-{
-  sb += this.name + "=" + this.value + "\n";
-}
-else
-{
-while(i < k)
-{
-  sb += this.lines[i] + "\n";
-  i += 1;
-}
-}
-// attributes
-if(this.attributes.length != 0)
-{
-  sb += "{\n";
-  let k = this.attributes.length;
-  let i = 0;
-  while(i < k)
-  {
-    sb += this.attributes[i].getData();
-    i += 1;
-  }
-  sb += "}\n";
-}
-return sb;
-}
-
-
-DText.prototype.inRange = function(xx, yy)
-{
-let b = false;
-let oc = this.selectBox.outcode(xx, de.correctY(yy));
-if(oc == 0) b = true;
-return(b);	
-}
-
-DText.prototype.makeSelectBox = function()
-{
-  this.selectBox = new Rectangle2D();
-//  this.selectBox = this.selectBox.setRect(this.x - 40 , de.correctY(this.y) - 40 ,  80, 80 );
-//  alert(this.textwidth);
-  let j = this.size * 10;
-  this.selectBox = this.selectBox.setRect(this.x  , de.correctY(this.y)  ,  this.textwidth, j );
-  return(this.selectBox);
-}
-
-DText.prototype.paint = function(ctx)
-{
- this.dPaint(ctx); 
-}
-
-DText.prototype.dPaint = function(ctx)
-{
-  if(this.visibility == 1)
-  {
-  z = de.getInverseZoom();
-  this.lines.forEach((s, index) => {
-  ctx.save();
-  ctx.fillStyle = de.getColor(this.colorindex);
-//  ctx.textAlign = "left";
-  if(this.alignment <= 2)  ctx.textAlign = "left";
-  else if(this.alignment <= 5)  ctx.textAlign = "center";
-  else ctx.textAlign = "right";
-  if((this.alignment == 0) || (this.alignment == 3) || (this.alignment == 6)) ctx.textBaseline = "bottom";
-  else if((this.alignment == 1) || (this.alignment == 4) || (this.alignment == 7)) ctx.textBaseline = "middle";
-  else ctx.textBaseline = "top";
-//  alert(this.size);
-  ctx.font = this.size + "px sans-serif"; 
-//  let s = this.lines[0];
-//  this.lines.forEach((s, index) => {
-    if(s != null)
-    {
-      s = s.toString();
-      let i = s.indexOf("=");
-      if(i != -1)
-      {
-        if(this.show_name_value == 1) s = s.substring(i+1);
-        else if(this.show_name_value == 2) s = s.substring(0, i);
-      }
-      let tm = ctx.measureText(s);
-      this.textwidth = 10 * tm.width;
-      let lineheight = tm.fontBoundingBoxAscent + tm.fontBoundingBoxDescent;
-      let yy = this.y - 10 * index * lineheight;
-//      report("3371 " + index + " " + this.x + ", " + this.y + " " + yy + " " + s);
-      let za = 10/z;
-      let zb = 10/z;
-      if(this.flip == 1) za = -za;
-      else if(this.flip == 2) zb = -zb;
-      ctx.scale( za, zb);
-//      ctx.scale( 10/z, 10/z);
-      ctx.fillText(s, this.x / 10, de.correctY(yy) / 10);
-//      ctx.restore();
-      if(this.selectable == 1)
-      {
-        this.selectBox = this.makeSelectBox();
-        if(sheet.getSelectedObject() == this)
-        {
-          this.selectBox.paint(ctx, de.getColor(BOUNDINGBOX_COLOR), de.getInverseZoom());
-        }
-      }
-    }
-  ctx.restore();
-  });
-//  ctx.restore();
-  }
-}
 
 //DPin
 function DPin(de, x1, y1, x2, y2, colorindex, pintype, whichend, textsize)
 {
   this.klass = "DPin";
-  this.de = de;
+  // de = de;
   this.x1 = Number(x1);
   this.y1 = Number(y1);
   this.x2 = Number(x2);
   this.y2 = Number(y2);
   this.colorindex = Number(colorindex);
-//  this.color = this.de.getColor(this.colorindex);
+//  this.color = de.getColor(this.colorindex);
   this.pintype = Number(pintype);
   this.whichend = Number(whichend);
   this.textsize = Number(textsize);
@@ -3423,7 +3700,7 @@ function DPin(de, x1, y1, x2, y2, colorindex, pintype, whichend, textsize)
   this.yw = 0;
   this.setWhichEnd(whichend);
   this.radius = 40;
-  this.circle.makeArc(this.xw, this.de.correctY(this.yw), this.radius, 0, 2 * Math.PI);
+  this.circle.makeArc(this.xw, de.correctY(this.yw), this.radius, 0, 2 * Math.PI);
   this.selectBox = this.makeSelectBox();
   this.selectable = 1;
   this.margin = 80;
@@ -3436,7 +3713,30 @@ function DPin(de, x1, y1, x2, y2, colorindex, pintype, whichend, textsize)
   this.visible = 1;
   this.netpin = false;
   this.pinoffset = 0;
+  this.labeloffset = 250;
 //  de.setFrame(circle, xw, yw, 40);
+}
+
+DPin.prototype.getDataJ = function()
+{
+  let o = {
+      type: "DPin",
+      x1: this.x1,
+      y1: this.y1,
+      x2: this.x2,
+      y2: this.y2,
+      colorindex: this.colorindex,
+      pintype: this.pintype,
+      whichend: this.whichend,
+      textsize: this.textsize,
+      angle: this.angle,
+      visible: this.visible,
+      connectedSignal: this.connectedSignal,
+      attributes: this.attributes
+      
+      
+  };
+  return(o);
 }
 
 DPin.prototype.setAngle = function(a)
@@ -3501,7 +3801,7 @@ DPin.prototype.update = function()
    }
    let x = getAttributeValue("pintype", this);
    if(x == "bus") this.circle.filltype = 1;
-   this.circle.makeArc(this.xw, this.de.correctY(this.yw), this.radius, 0, 2 * Math.PI);
+   this.circle.makeArc(this.xw, de.correctY(this.yw), this.radius, 0, 2 * Math.PI);
    this.selectBox = this.makeSelectBox();
 }
 
@@ -3570,6 +3870,32 @@ if(this.attributes.length != 0)
   sb += "}\n";
 }
 return sb;
+}
+
+DPin.prototype.fixPinlabel = function()
+{
+  let a = getAttribute("pinlabel", this);
+  if(this.x1 < this.x2)  
+  {
+    let xx = a.getX() + this.labeloffset; 
+    a.setX(xx);
+  }
+  else if(this.x1 > this.x2)
+  {
+      report("3587 " + a.getTextWidth() + " " + getAttributeValue("pinlabel", this)); 
+    let xx = a.getX() - this.labeloffset - a.getTextWidth() * a.size; 
+    a.setX(xx);
+  }
+  else if(this.y1 > this.y2)
+  {
+    let yy = a.getY() - this.labeloffset;
+    a.setY(yy);
+  }
+  else if(this.y1 < this.y2)
+  {
+    let yy = a.getY() + this.labeloffset;
+    a.setY(yy);
+  }
 }
 
 DPin.prototype.updateAttributeLocations = function()
@@ -3685,6 +4011,7 @@ DPin.prototype.dPaint = function(ctx)
   }
 }
 
+
 function createAttribute(de, x, y, colorindex, size, visibility, show_name_value,
 			angle, alignment, name, value)
 {
@@ -3795,7 +4122,7 @@ function updateAttribute(att, value)
 function DComponent(de, x, y, selectable, angle, mirror, filename)
 {
   this.klass = "DComponent";
-  this.de = de;
+  // de = de;
   this.x = Number(x);
   this.y = Number(y);
   this.selectable = Number(selectable);
@@ -3806,14 +4133,68 @@ function DComponent(de, x, y, selectable, angle, mirror, filename)
   this.basename = filename;
   this.doj = [];
   this.vpins = [];
+  this.pins = [];
   this.attributes = [];
   this.selectBox = new Rectangle2D();
   this.selectBox.setRect(0  , de.correctY(0) , 100, 100);
   this.togglepinnumber = true;
-  this.attributes[this.attributes.length] = createAttribute(de, x, y, ATTRIBUTE_COLOR, 10, VISIBILITY_INVISIBLE, SHOW_VALUE, 0, 1, "device", "");
-  this.attributes[this.attributes.length] = createAttribute(de, x, y, ATTRIBUTE_COLOR, 10, VISIBILITY_VISIBLE, SHOW_VALUE, 0, 1, "refdes", "");
+  let a = createAttribute(de, x, y, ATTRIBUTE_COLOR, 10, VISIBILITY_INVISIBLE, SHOW_VALUE, 0, 1, "device", "");
+  a.parent = this;
+  this.attributes.push(a);
+//  this.attributes[this.attributes.length] = createAttribute(de, x, y, ATTRIBUTE_COLOR, 10, VISIBILITY_INVISIBLE, SHOW_VALUE, 0, 1, "device", "");
+  a = createAttribute(de, x, y, ATTRIBUTE_COLOR, 10, VISIBILITY_VISIBLE, SHOW_VALUE, 0, 1, "refdes", "");
+  a.parent = this;
+  this.attributes.push(a);
+//  this.attributes[this.attributes.length] = createAttribute(de, x, y, ATTRIBUTE_COLOR, 10, VISIBILITY_VISIBLE, SHOW_VALUE, 0, 1, "refdes", "");
   this.boxoffset = 0;
   this.setAngle(angle);
+}
+
+DComponent.prototype.getDataJ = function()
+{
+  let o = {
+      type: "DComponent",
+      x: this.x,
+      y: this.y,
+      selectable: this.selectable,
+      angle: this.angle,
+      mirror: this.mirror,
+      filename: this.filename,
+      attributes: [],
+      pins: this.pins,
+      dojs: []
+  };
+  
+  this.vpins.forEach( (pin) => {
+      o.pins.push(pin.getDataJ());
+      });
+  
+  this.doj.forEach( (oj) => {
+      if(oj.klass == "DPin") 
+      {
+          let pnt = oj.parent;
+          oj.parent = null;
+          o.pins.push(oj.getDataJ());
+          oj.parent = pnt;
+      }
+      else
+      {
+        try{
+//            report("4083 " + oj.klass);
+          o.dojs.push(oj.getDataJ());  
+        }
+        catch(e) {
+            report("3934 " + oj.klass + " " + e);
+        }
+      }
+      });
+  this.attributes.forEach( (att) => {
+      let pnt = att.parent;
+      att.parent = null;
+      o.attributes.push(att.getDataJ());
+      att.parent = pnt;
+  });
+  return(o);
 }
 
 //TODO
@@ -3925,7 +4306,7 @@ DComponent.prototype.update = function()
 	  let p = this.getPinByNumber(pn);
 	  if(p == null)
 	  {
-	    p = new DPin(this.de, 0, 0, 0, 0, PIN_COLOR, 0, 0, 8);
+	    p = new DPin(de, 0, 0, 0, 0, PIN_COLOR, 0, 0, 8);
 	    p.visible = 0;
 	    p.netpin = true;
 	    setAttributeValue("pinnumber", p, pn);
@@ -4635,7 +5016,7 @@ DComponent.prototype.saveSymbolData = function()
 function DNet(de, x1, y1, x2, y2, colorindex)
 {
   this.klass = "DNet";
-  this.de = de;
+  // de = de;
   this.x1 = Number(x1);
   this.y1 = Number(y1);
   this.x2 = Number(x2);
@@ -4643,12 +5024,31 @@ function DNet(de, x1, y1, x2, y2, colorindex)
   this.colorindex = Number(colorindex);
   this.textsize = 10;
   this.attributes = [];
-  this.attributes[this.attributes.length] = createAttribute(this.de, this.x1 + 50, this.y1 + 50, ATTRIBUTE_COLOR, this.textsize, VISIBILITY_INVISIBLE, SHOW_VALUE, 0, 1, "netname", "");
+  this.attributes.push(createAttribute(de, this.x1 + 50, this.y1 + 50, ATTRIBUTE_COLOR, this.textsize, VISIBILITY_INVISIBLE, SHOW_VALUE, 0, 1, "netname", ""));
   this.line = new Line2D();
   de.setLine(this.line, x1, y1, x2, y2);
   this.selectBox = this.makeSelectBox();
   this.selectable = 1;
+  this.name = "";
 
+}
+
+DNet.prototype.getDataJ = function()
+{
+  let o = {
+      type: "DNet",
+      name: this.name,
+      x1: this.x1,
+      y1: this.y1,
+      x2: this.x2,
+      y2: this.y2,
+      colorindex: this.colorindex,
+      selectable: this.selectable,
+      textsize: this.textsize,
+      line: this.line,
+      attributes: this.attributes
+  };
+  return(o);
 }
 
 DNet.prototype.setColorIndex = function(ci)
@@ -4892,16 +5292,31 @@ function getFreeEnd(net)
 function DJunction(de, x, y, colorindex)
 {
   this.klass = "DJunction";
-  this.de = de;
+  // de = de;
   this.x = Number(x);
   this.y = Number(y);
   this.colorindex = Number(colorindex);
   this.box = new Rectangle2D();
   this.box.filltype = 1;
-  this.box.setRect(x - 50, this.de.correctY(y - 50), 100, 100);
+  this.box.setRect(x - 50, de.correctY(y - 50), 100, 100);
   this.selectBox = this.makeSelectBox();
   this.selectable = 1;
   this.attributes = [];
+}
+
+DJunction.prototype.getDataJ = function()
+{
+  let o = {
+      type: "DJunction",
+      x: this.x,
+      y: this.y,
+      colorindex: this.colorindex,
+      filltype: this.box.filltype,
+      selectable: this.selectable,
+      attributes: this.attributes,
+      selectBox: this.selectBox
+  }
+  return(o);
 }
 
 DJunction.prototype.getX = function()
@@ -4926,9 +5341,9 @@ DJunction.prototype.setY = function(y)
 
 DJunction.prototype.update = function()
 {
-//  alert(this.x + " " +  this.de.correctY(this.y) + " " + this.boxwidth +" " + this.boxheight);
+//  alert(this.x + " " +  de.correctY(this.y) + " " + this.boxwidth +" " + this.boxheight);
   this.box.filltype = 1;
-  this.box.setRect(this.x - 50, this.de.correctY(this.y - 50), 100, 100); 
+  this.box.setRect(this.x - 50, de.correctY(this.y - 50), 100, 100); 
   this.makeSelectBox();
 }
 
@@ -4948,7 +5363,7 @@ return(b);
 DJunction.prototype.makeSelectBox = function()
 {
   this.selectBox = new Rectangle2D();
-// alert(this.x + " " +  this.de.correctY(this.y) + " " + this.boxwidth +" " + this.boxheight);
+// alert(this.x + " " +  de.correctY(this.y) + " " + this.boxwidth +" " + this.boxheight);
   this.selectBox = this.selectBox.setRect(this.x - 90 , de.correctY(this.y) + 90  , 140, 140 );
   return(this.selectBox);
 }
@@ -4972,7 +5387,7 @@ DJunction.prototype.dPaint = function(ctx)
 function DBus(de, x1, y1, x2, y2, colorindex, ripperdir)
 {
   this.klass = "DBus";
-  this.de = de;
+  // de = de;
   this.x1 = Number(x1);
   this.y1 = Number(y1);
   this.x2 = Number(x2);
@@ -4988,6 +5403,44 @@ function DBus(de, x1, y1, x2, y2, colorindex, ripperdir)
   this.selectBox = this.makeSelectBox();
   this.selectable = 1;
   this.members = []; // an array of Net
+}
+
+DBus.prototype.getDataJ = function()
+{
+  let o = {
+      klass: "DBus",
+      x1: this.x1,
+      y1: this.y1,
+      x2: this.x2,
+      y2: this.y2,
+      colorindex: this.colorindex,
+      ripperdir: this.ripperdir,
+      width: this.width,
+      textsize: this.textsize,
+      attributes: [],
+      line: this.line,
+//  this.line.lineWidth = this.width;
+//  de.setLine(this.line, x1, y1, x2, y2);
+//      this.selectBox = this.makeSelectBox();
+      selectable: this.selectable,
+      members: []
+  };
+  
+  this.attributes.forEach( (att) => {
+      let pnt = att.parent;
+      att.parent = null;
+      o.attributes.push(att.getDataJ());
+      att.parent = pnt;
+  });
+  
+  this.members.forEach( (mem) => {
+      let pnt = mem.parent;
+      mem.parent = null;
+      o.members.push(mem.getDataJ());
+      mem.parent = pnt;
+  });
+  
+  return(o);
 }
 
 DBus.prototype.addMember = function(dnet)
@@ -5202,7 +5655,7 @@ function DPicture(de, x, y, width, height, angle, mirrored, embedded)
   this.img = null;
   this.loaded = false;
   this.data = "";
-  this.de = de;
+  // de = de;
   this.x = x;
   this.y = y;
   this.width = width;
@@ -5402,6 +5855,25 @@ function DEnd(x, y)
   this.connectedSignal = null;
   this.selectBox = null;
   this.parent = null;
+}
+
+DEnd.prototype.getDataJ = function()
+{
+  let o = {
+      klass: this.klass,
+      x: this.x,
+      y: this.y,
+      attributes: [],
+      connectedSignal: this.connectedSignal,
+      selectBox: null
+  };
+  this.attributes.forEach( (att) => {
+      let pnt = att.parent;
+      att.parent = null;
+      o.attributes.push(att.getDataJ());
+      att.parent = pnt;
+  });
+  return(o);
 }
 
 DEnd.prototype.makeSelectBox = function()

@@ -288,7 +288,7 @@ sbx += "ARCHITECTURE schematic OF " + ProjectName + " IS\n\n";
 // create components
 		
 // create signals
-let its = sm.netv;
+let its = sm.nets;
 kk = its.length;
 ii = 0;
 while(ii < kk)
@@ -314,7 +314,7 @@ while(ii < kk)
   ii += 1;
 }
 // list vectors
-its = sm.busarray;
+its = sm.buses;
 kk = its.length;
 ii = 0;
 while(ii < kk)
@@ -1627,7 +1627,7 @@ sb += "\n  //define architecture\n  let a = this.addNewArchitecture(\"schematic\
 // create components
 let prereqs = "[";
 // create signals
-let its = sm.netv;
+let its = sm.nets;
 kk = its.length;
 ii = 0;
 sb += "\n  //define signals\n";
