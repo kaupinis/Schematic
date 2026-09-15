@@ -5,6 +5,7 @@ body {
     font-family: Arial, Helvetica, sans-serif;
     color: black;
     background: #fbfae8;
+    --audio-background: #4169e1; /*"RoyalBlue" #4169e1 */
 /*    background: #cccc99; */
  /*   background: #fbfae8; */
 /*    overflow: hidden; */
@@ -141,6 +142,46 @@ button {
 
 .buttonT:active {
   background-color: #3e8e41;
+  box-shadow: 0 5px #666;
+  transform: translateY(4px);
+}
+
+.sndbuttonR{
+  position:fixed;
+  height:50px;
+  width:50px;
+  right:10px;
+  float:right;
+  padding:0;
+  color:white;
+ /*   border-width: 3px 5px 3px 5px;
+   border-radius: 0; */
+  background-color: var(--audio-background);
+  opacity:0.7;
+}
+
+.sndbuttonR:active {
+/*  background-color: white; */
+  box-shadow: 0 5px #666;
+  transform: translateY(4px);
+}
+
+.sndbuttonL{
+  position:fixed;
+  height:50px;
+  width:50px;
+  left:50px;
+  float:left;
+  padding:0;
+  color: white;
+/*    border-width: 3px 5px 3px 5px;
+  border-radius: 0; */
+  background-color: var(--audio-background);
+  opacity:0.7;
+}
+
+.sndbuttonL:active {
+/*  background-color: white; */
   box-shadow: 0 5px #666;
   transform: translateY(4px);
 }
@@ -334,4 +375,25 @@ td {
 
 .inactivemenu {
   pointer-events: none;
+}
+
+.speech-bubble {
+	position: relative;
+	background: #f8e45c;
+	border-radius: .4em;
+}
+
+.speech-bubble:after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	width: 0;
+	height: 0;
+	border: 20px solid transparent;
+	border-top-color: #f8e45c;
+	border-bottom: 0;
+	border-right: 0;
+	margin-left: -10px;
+	margin-bottom: -20px;
 }
